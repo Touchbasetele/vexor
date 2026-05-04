@@ -5,7 +5,23 @@ function escapeHtmlSnippet(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function sanitizeActivityHtml(html) {
+  const placeholders = [];
+  const stash = (tag) => {
+    const token = `__VEXOR_SAFE_TAG_${placeholders.length}__`;
+    placeholders.push([token, tag]);
+    return token;
+  };
+  const withPlaceholders = String(html)
+    .replace(/<\/?strong>/gi, (tag) => stash(tag.toLowerCase()))
+    .replace(/<br\s*\/?>/gi, () => stash('<br>'));
+  let escaped = escapeHtmlSnippet(withPlaceholders);
+  for (const [token, tag] of placeholders) escaped = escaped.replaceAll(token, tag);
+  return escaped;
 }
 
 function stringifyCsv(cell) {
@@ -85,7 +101,7 @@ function logActivity(db, tag_class, tag_label, description_html, time_label = 'J
   const o = nextActivityOrder(db);
   db.prepare(
     `INSERT INTO activity (tag_class, tag_label, description_html, time_label, sort_order) VALUES (?,?,?,?,?)`,
-  ).run(tag_class, tag_label, description_html, time_label, o);
+  ).run(tag_class, tag_label, sanitizeActivityHtml(description_html), time_label, o);
 }
 
 export function registerApi(app, db) {
@@ -103,7 +119,7 @@ export function registerApi(app, db) {
         .prepare(`SELECT COUNT(*) AS c FROM approval WHERE status = 'pending'`)
         .get().c;
       const vendorActive = db.prepare(`SELECT COUNT(*) AS c FROM vendor WHERE active = 1`).get().c;
-      const screens = formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending, vendorActive);
+      const screens = formatMeta(meta, inboxUnread, criticalCount, rfqCount, approvalsPending, vendorActive);
 
       res.json({
         tenant,
@@ -632,20 +648,24 @@ export function registerApi(app, db) {
   });
 }
 
-export function registerAuthApi(app, knex) {
-  const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
-
+export function registerAuthApi(app, knex, config) {
   // Auth: login
   app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = await knex('users').where({ email }).first();
+    const user = await knex('users').where({ email, active: true }).first();
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-    // For demo, skip bcrypt check if using placeholder hash
-    const valid = user.password_hash.startsWith('$2b$')
+    const isBcryptHash = /^\$2[aby]\$/.test(user.password_hash);
+    if (!isBcryptHash && config.isProduction) {
+      return res.status(500).json({ error: 'Password store is not production-ready' });
+    }
+    const valid = isBcryptHash
       ? await bcrypt.compare(password, user.password_hash)
       : password === 'admin';
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, role_id: user.role_id }, config.jwtSecret, {
+      expiresIn: '8h',
+      issuer: 'vexor-erp',
+    });
     res.json({ token });
   });
 
@@ -655,7 +675,7 @@ export function registerAuthApi(app, knex) {
     if (!authHeader) return res.status(401).json({ error: 'No token' });
     const token = authHeader.split(' ')[1];
     try {
-      req.user = jwt.verify(token, JWT_SECRET);
+      req.user = jwt.verify(token, config.jwtSecret);
       next();
     } catch {
       res.status(401).json({ error: 'Invalid token' });

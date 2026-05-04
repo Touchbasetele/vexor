@@ -3,6 +3,10 @@ dotenv.config();
 
 const isProd = process.env.NODE_ENV === 'production';
 
+if (isProd && !process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required when NODE_ENV=production.');
+}
+
 const config = {
   client: isProd ? 'pg' : 'better-sqlite3',
   connection: isProd

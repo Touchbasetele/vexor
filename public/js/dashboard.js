@@ -22,6 +22,20 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+function sanitizeInlineHtml(html) {
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  const allowedTags = new Set(['STRONG', 'BR']);
+  for (const node of template.content.querySelectorAll('*')) {
+    if (!allowedTags.has(node.tagName)) {
+      node.replaceWith(document.createTextNode(node.textContent || ''));
+      continue;
+    }
+    for (const attr of [...node.attributes]) node.removeAttribute(attr.name);
+  }
+  return template.innerHTML;
+}
+
 function toast(msg) {
   const el = document.getElementById('automation-toast');
   if (!el) return;
@@ -167,7 +181,7 @@ function renderActivities(rows) {
     .map(
       (r) => `<div class="activity-item">
       <span class="tag ${escapeHtml(r.tag_class)}">${escapeHtml(r.tag_label)}</span>
-      <span class="desc">${r.description_html}</span>
+      <span class="desc">${sanitizeInlineHtml(r.description_html)}</span>
       <div class="time">${escapeHtml(r.time_label)}</div>
     </div>`,
     )

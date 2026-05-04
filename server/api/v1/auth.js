@@ -4,26 +4,30 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
-const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
-
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
-export function authRouter(knex) {
+export function authRouter(knex, config) {
+  const router = express.Router();
+
   router.post('/login', async (req, res) => {
     const parse = LoginSchema.safeParse(req.body);
-    if (!parse.success) return res.status(400).json({ error: parse.error.errors });
+    if (!parse.success) return res.status(400).json({ error: parse.error.issues });
     const { email, password } = parse.data;
-    const user = await knex('users').where({ email }).first();
+    const user = await knex('users').where({ email, active: true }).first();
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-    const valid = user.password_hash.startsWith('$2b$')
-      ? await bcrypt.compare(password, user.password_hash)
-      : password === 'admin';
+    const isBcryptHash = /^\$2[aby]\$/.test(user.password_hash);
+    if (!isBcryptHash && config.isProduction) {
+      return res.status(500).json({ error: 'Password store is not production-ready' });
+    }
+    const valid = isBcryptHash ? await bcrypt.compare(password, user.password_hash) : password === 'admin';
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, role_id: user.role_id }, config.jwtSecret, {
+      expiresIn: '8h',
+      issuer: 'vexor-erp',
+    });
     res.json({ token });
   });
   return router;

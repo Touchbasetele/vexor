@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node server/index.mjs",
     "dev": "node --watch server/index.mjs",
-    "seed": "node server/seed.mjs"
+    "check": "node --check server/index.mjs && node --check server/api.mjs && node --check server/api/v1/index.js",
+    "migrate": "knex migrate:latest",
+    "seed": "node server/seed.mjs",
+    "seed:core": "knex seed:run",
+    "smoke": "node server/smoke.mjs"
   },
   "engines": {
     "node": ">=18"
