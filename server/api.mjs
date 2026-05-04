@@ -30,7 +30,9 @@ function stringifyCsv(cell) {
   return t;
 }
 
-function formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending, vendorActive, db) {
+function formatMeta(meta, inboxUnread, criticalCount, rfqCount, approvalsPending, vendorActive, db) {
+  const greeting = meta?.greeting ?? 'Hello';
+  const userName = meta?.user_name ?? '';
   const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
   const dateStr = new Intl.DateTimeFormat('en-US', opts).format(new Date());
 
@@ -48,7 +50,7 @@ function formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending
 
   return {
     dashboard: {
-      title: `${meta.greeting}, ${meta.user_name}`,
+      title: userName ? `${greeting}, ${userName}` : greeting,
       sub: dateStr,
     },
     inbox: {
@@ -73,7 +75,7 @@ function formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending
     },
     inventory: {
       title: 'Inventory',
-      sub: `${criticalStock} critical SKUs`,
+      sub: `${criticalCount} critical SKUs`,
     },
     approvals: {
       title: 'Approval queue',
