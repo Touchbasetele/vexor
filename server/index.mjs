@@ -15,6 +15,7 @@ const publicDir = path.join(root, 'public');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 app.disable('x-powered-by');
 app.use(helmet({
@@ -51,6 +52,7 @@ async function ensureSeed() {
 
 await ensureSeed();
 
-app.listen(PORT, () => {
-  console.log(`Vexor ERP listening on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log(`Vexor ERP listening on http://${displayHost}:${PORT}`);
 });
