@@ -1,0 +1,797 @@
+<!-- Legacy demo fragment. Branded app: run `npm start` → http://localhost:3000 (public/index.html · Vexor). -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --brand:#0F6E56;--brand-light:#E1F5EE;--brand-mid:#1D9E75;
+    --accent:#BA7517;--accent-light:#FAEEDA;
+    --danger:#A32D2D;--danger-light:#FCEBEB;
+    --info:#185FA5;--info-light:#E6F1FB;
+    --warn:#854F0B;--warn-light:#FAEEDA;
+    --success:#3B6D11;--success-light:#EAF3DE;
+    --mono:'DM Mono',monospace;--sans:'Syne',sans-serif;
+  }
+  .shell{display:flex;height:640px;background:var(--color-background-tertiary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;font-family:var(--sans)}
+  .sidebar{width:196px;min-width:196px;background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto}
+  .sb-logo{padding:16px 14px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .sb-logo .wordmark{font-size:15px;font-weight:700;color:var(--brand);letter-spacing:-0.3px}
+  .sb-logo .tenant{font-size:11px;color:var(--color-text-secondary);margin-top:2px;font-family:var(--mono)}
+  .sb-section{padding:10px 0 4px}
+  .sb-label{font-size:9px;letter-spacing:1.2px;color:var(--color-text-tertiary);padding:0 14px 4px;text-transform:uppercase}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:12px;color:var(--color-text-secondary);transition:background 0.1s;border-left:2px solid transparent}
+  .sb-item:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+  .sb-item.active{background:var(--brand-light);color:var(--brand);border-left-color:var(--brand);font-weight:500}
+  .sb-item .badge{margin-left:auto;background:var(--color-background-secondary);color:var(--color-text-secondary);font-size:10px;padding:1px 6px;border-radius:10px;font-family:var(--mono)}
+  .sb-item.active .badge{background:var(--brand-light);color:var(--brand)}
+  .sb-item .icon{width:14px;height:14px;opacity:0.7;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;min-height:48px}
+  .topbar-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+  .topbar-sub{font-size:11px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:1px}
+  .topbar-actions{display:flex;gap:8px}
+  .btn{padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-primary);transition:background 0.1s}
+  .btn:hover{background:var(--color-background-secondary)}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .btn.primary:hover{background:var(--brand-mid)}
+  .content{flex:1;overflow-y:auto;padding:16px 20px}
+  .screen{display:none}
+  .screen.active{display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  .stat-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+  .stat-label{font-size:10px;color:var(--color-text-tertiary);letter-spacing:0.5px;text-transform:uppercase;font-family:var(--mono)}
+  .stat-val{font-size:22px;font-weight:700;color:var(--color-text-primary);margin:4px 0 2px;letter-spacing:-1px}
+  .stat-sub{font-size:10px;font-family:var(--mono)}
+  .stat-sub.up{color:var(--success)}
+  .stat-sub.down{color:var(--danger)}
+  .stat-sub.warn{color:var(--accent)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .panel{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px}
+  .panel-title{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;font-family:var(--mono)}
+  .activity-item{padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+  .activity-item:last-child{border-bottom:none}
+  .activity-item .time{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:2px}
+  .activity-item strong{font-weight:500;color:var(--color-text-primary)}
+  .activity-item .desc{color:var(--color-text-secondary)}
+  .tag{display:inline-block;font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:10px;font-weight:500;margin-right:4px;vertical-align:middle}
+  .tag.quote{background:var(--info-light);color:var(--info)}
+  .tag.invoice{background:var(--accent-light);color:var(--accent)}
+  .tag.emergency{background:var(--danger-light);color:var(--danger)}
+  .tag.approval{background:#f0e8ff;color:#534AB7}
+  .tag.urgent{background:var(--danger-light);color:var(--danger)}
+  .tag.matched{background:var(--success-light);color:var(--success)}
+  .tag.extracted{background:var(--brand-light);color:var(--brand)}
+  .tag.internal{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .critical-stock{display:flex;flex-direction:column;gap:6px}
+  .stock-row{display:flex;align-items:center;gap:8px;font-size:12px}
+  .stock-row .sku{font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary);width:80px;min-width:80px}
+  .stock-row .name{flex:1;color:var(--color-text-secondary);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stock-row .count{font-family:var(--mono);font-size:11px;font-weight:500;min-width:28px;text-align:right}
+  .stock-row .count.crit{color:var(--danger)}
+  .stock-row .count.warn{color:var(--accent)}
+  .stock-bar{flex:1;height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden}
+  .stock-fill{height:100%;border-radius:2px}
+  .inbox-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .filter-btn{padding:4px 10px;border-radius:20px;border:0.5px solid var(--color-border-tertiary);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-secondary);transition:all 0.1s}
+  .filter-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .inbox-list{display:flex;flex-direction:column;gap:0}
+  .inbox-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background 0.1s;border-radius:0}
+  .inbox-row:hover{background:var(--color-background-secondary)}
+  .inbox-row.selected{background:var(--brand-light)}
+  .inbox-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+  .inbox-body{flex:1;min-width:0}
+  .inbox-sender{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+  .inbox-subject{font-size:11px;color:var(--brand);margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inbox-preview{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inbox-meta{text-align:right;flex-shrink:0}
+  .inbox-time{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono)}
+  .inbox-tags{margin-top:4px;display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+  .search-bar{display:flex;align-items:center;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 10px;margin-bottom:12px;gap:6px;background:var(--color-background-primary)}
+  .search-bar input{border:none;outline:none;background:transparent;font-size:12px;color:var(--color-text-primary);font-family:var(--sans);flex:1;width:100%}
+  .search-icon{font-size:12px;color:var(--color-text-tertiary)}
+  .quote-table{width:100%;border-collapse:collapse;font-size:12px}
+  .quote-table th{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--color-text-tertiary);font-family:var(--mono);padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .quote-table td{padding:10px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary)}
+  .quote-table tr:last-child td{border-bottom:none}
+  .quote-table .label{color:var(--color-text-primary);font-weight:500}
+  .winner-col{color:var(--brand);font-weight:500}
+  .winner-header{background:var(--brand-light);color:var(--brand)}
+  .best-badge{font-size:9px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;font-family:var(--mono);vertical-align:middle}
+  .winner-badge{display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);font-size:10px;padding:3px 8px;border-radius:12px;font-family:var(--mono);font-weight:500;margin-bottom:12px}
+  .score-bar{display:inline-flex;align-items:center;gap:6px}
+  .score-fill{height:6px;border-radius:3px;background:var(--brand)}
+  .score-bg{width:60px;height:6px;border-radius:3px;background:var(--color-background-secondary)}
+  .po-doc{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:20px;font-size:12px;max-width:560px}
+  .po-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--color-border-tertiary)}
+  .po-company{font-size:16px;font-weight:700;color:var(--color-text-primary);letter-spacing:-0.5px}
+  .po-address{font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:4px;line-height:1.5}
+  .po-title-block{text-align:right}
+  .po-title{font-size:13px;font-weight:700;color:var(--brand);letter-spacing:1px;text-transform:uppercase}
+  .po-num{font-size:15px;font-weight:700;color:var(--color-text-primary);font-family:var(--mono)}
+  .po-meta{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:4px}
+  .po-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .po-party-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--color-text-tertiary);font-family:var(--mono);margin-bottom:4px}
+  .po-party-name{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+  .po-party-detail{font-size:11px;color:var(--color-text-secondary);line-height:1.5;font-family:var(--mono)}
+  .po-line-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+  .po-line-table th{font-size:9px;text-transform:uppercase;letter-spacing:0.7px;color:var(--color-text-tertiary);font-family:var(--mono);padding:6px 8px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .po-line-table td{padding:8px 8px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary);vertical-align:top}
+  .po-line-table td:last-child{text-align:right;font-family:var(--mono)}
+  .po-totals{text-align:right;font-size:12px;margin-top:8px}
+  .po-totals .total-row{display:flex;justify-content:flex-end;gap:24px;padding:3px 0;color:var(--color-text-secondary)}
+  .po-totals .grand{font-weight:700;color:var(--color-text-primary);font-size:14px;border-top:1px solid var(--color-border-tertiary);padding-top:6px;margin-top:4px}
+  .po-footer{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)}
+  .sig-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--color-text-tertiary);font-family:var(--mono)}
+  .sig-name{font-size:11px;color:var(--color-text-primary);font-weight:500;margin-top:4px}
+  .sig-status{font-size:10px;font-family:var(--mono);margin-top:2px}
+  .sig-status.pending{color:var(--accent)}
+  .sig-status.approved{color:var(--success)}
+  .inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .inv-table{width:100%;border-collapse:collapse;font-size:12px}
+  .inv-table th{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--color-text-tertiary);font-family:var(--mono);padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .inv-table td{padding:10px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);vertical-align:middle}
+  .inv-level{height:6px;border-radius:3px;background:var(--color-background-secondary);width:80px;overflow:hidden}
+  .inv-fill{height:100%;border-radius:3px}
+  .forecast-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+  .forecast-item:last-child{border-bottom:none}
+  .forecast-sku{font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)}
+  .forecast-days{font-family:var(--mono);font-size:11px;font-weight:500}
+  .forecast-days.crit{color:var(--danger)}
+  .forecast-days.warn{color:var(--accent)}
+  .forecast-days.ok{color:var(--success)}
+  .action-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-primary);width:100%;margin-bottom:6px;transition:background 0.1s}
+  .action-btn:hover{background:var(--color-background-secondary)}
+  .action-btn .dot{width:6px;height:6px;border-radius:50%}
+  .rfq-pipeline{display:flex;flex-direction:column;gap:8px}
+  .rfq-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px}
+  .rfq-id{font-family:var(--mono);font-size:10px;color:var(--brand);font-weight:500}
+  .rfq-name{font-size:12px;font-weight:500;color:var(--color-text-primary);margin:2px 0 8px}
+  .pipeline-steps{display:flex;align-items:center;gap:0}
+  .step{display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);color:var(--color-text-tertiary)}
+  .step.done{color:var(--brand)}
+  .step.active{color:var(--accent)}
+  .step-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;background:transparent;flex-shrink:0}
+  .step.done .step-dot{background:currentColor}
+  .step-arrow{margin:0 4px;color:var(--color-text-tertiary);font-size:9px}
+  .pending-badge{display:inline-flex;align-items:center;gap:3px;background:var(--accent-light);color:var(--accent);font-size:9px;padding:2px 6px;border-radius:8px;font-family:var(--mono)}
+  .emg-badge{display:inline-flex;align-items:center;gap:3px;background:var(--danger-light);color:var(--danger);font-size:9px;padding:2px 6px;border-radius:8px;font-family:var(--mono)}
+  .rfq-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .mini-btn{padding:3px 8px;border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:transparent;font-size:10px;font-family:var(--mono);cursor:pointer;color:var(--color-text-secondary);transition:background 0.1s}
+  .mini-btn:hover{background:var(--brand-light);color:var(--brand);border-color:var(--brand)}
+  .topbar-status{display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);color:var(--success);padding:3px 8px;background:var(--success-light);border-radius:8px}
+  .pulse{width:6px;height:6px;border-radius:50%;background:var(--success)}
+</style>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="wordmark">ProcureOS</div>
+      <div class="tenant">Acme Retail Co.</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Core</div>
+      <div class="sb-item active" onclick="nav('dashboard',this)"><span class="icon">▣</span>Dashboard</div>
+      <div class="sb-item" onclick="nav('inbox',this)"><span class="icon">✉</span>Inbox<span class="badge">12</span></div>
+      <div class="sb-item" onclick="nav('rfx',this)"><span class="icon">≡</span>RFX Manager<span class="badge">4</span></div>
+      <div class="sb-item" onclick="nav('quotes',this)"><span class="icon">⚖</span>Quote Compare</div>
+      <div class="sb-item" onclick="nav('po',this)"><span class="icon">◻</span>Purchase Orders</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Finance</div>
+      <div class="sb-item" onclick="nav('invoices',this)"><span class="icon">≣</span>Invoices<span class="badge">6</span></div>
+      <div class="sb-item"><span class="icon">✔</span>Approvals<span class="badge">2</span></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Intelligence</div>
+      <div class="sb-item" onclick="nav('inventory',this)"><span class="icon">▦</span>Inventory</div>
+      <div class="sb-item"><span class="icon">⊞</span>Vendors</div>
+      <div class="sb-item"><span class="icon">↑↓</span>Analytics</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar" id="topbar">
+      <div>
+        <div class="topbar-title" id="tb-title">Good morning, Sarah</div>
+        <div class="topbar-sub" id="tb-sub">Wed, April 29 2026 · AI Auto-tagging active</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-status"><div class="pulse"></div>AI Active</div>
+        <button class="btn">+ New RFQ</button>
+        <button class="btn primary">+ Create PO</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="screen active" id="screen-dashboard">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Open RFQs</div>
+            <div class="stat-val">14</div>
+            <div class="stat-sub up">↑ 3 new today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending POs</div>
+            <div class="stat-val">7</div>
+            <div class="stat-sub warn">2 need approval</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Invoices Due</div>
+            <div class="stat-val">$91K</div>
+            <div class="stat-sub down">↓ 3 overdue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Month Spend</div>
+            <div class="stat-val">$328K</div>
+            <div class="stat-sub warn">↑ 9% vs last mo</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Recent activity</div>
+            <div class="activity-item">
+              <span class="tag extracted">AI Extracted</span>
+              <span class="desc">Quote from <strong>Global Steel Inc.</strong> — RFQ-2024-089 · 3 items</span>
+              <div class="time">2 min ago</div>
+            </div>
+            <div class="activity-item">
+              <span class="tag approval">Approval</span>
+              <span class="desc"><strong>PO-2024-0234</strong> approved by Mark Chen, auto-submitted</span>
+              <div class="time">22 min ago</div>
+            </div>
+            <div class="activity-item">
+              <span class="tag urgent">Low Stock</span>
+              <span class="desc"><strong>SKU-4421</strong> Industrial Bearings — 8 units, threshold 15</span>
+              <div class="time">1 hr ago</div>
+            </div>
+            <div class="activity-item">
+              <span class="tag emergency">Emergency</span>
+              <span class="desc">Warehouse — Line 3 down, needs 50x bearings ASAP</span>
+              <div class="time">2 hr ago</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Critical stock</div>
+            <div class="critical-stock">
+              <div class="stock-row">
+                <div class="sku">SKU-4421</div>
+                <div class="stock-bar"><div class="stock-fill" style="width:27%;background:var(--danger)"></div></div>
+                <div class="name">Industrial Bearings</div>
+                <div class="count crit">8</div>
+              </div>
+              <div class="stock-row">
+                <div class="sku">SKU-2211</div>
+                <div class="stock-bar"><div class="stock-fill" style="width:40%;background:var(--accent)"></div></div>
+                <div class="name">Oil Filter HF-204</div>
+                <div class="count warn">12</div>
+              </div>
+              <div class="stock-row">
+                <div class="sku">SKU-3301</div>
+                <div class="stock-bar"><div class="stock-fill" style="width:52%;background:var(--accent)"></div></div>
+                <div class="name">Shaft Seal 40x55</div>
+                <div class="count warn">19</div>
+              </div>
+              <div class="stock-row">
+                <div class="sku">SKU-0889</div>
+                <div class="stock-bar"><div class="stock-fill" style="width:88%;background:var(--brand)"></div></div>
+                <div class="name">Hex Bolt M12×50</div>
+                <div class="count" style="color:var(--success)">240</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--color-border-tertiary)">
+              <button class="action-btn" onclick="nav('inventory',document.querySelector('[onclick*=inventory]'))">
+                <div class="dot" style="background:var(--danger)"></div> View inventory intelligence →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INBOX -->
+      <div class="screen" id="screen-inbox">
+        <div class="search-bar">
+          <span class="search-icon">⌕</span>
+          <input type="text" placeholder="Search procurement emails..." />
+        </div>
+        <div class="inbox-filter">
+          <button class="filter-btn active">All (12)</button>
+          <button class="filter-btn">Quotes (5)</button>
+          <button class="filter-btn">Invoices (4)</button>
+          <button class="filter-btn">RFQ (3)</button>
+          <button class="filter-btn">Emergency (1)</button>
+        </div>
+        <div class="inbox-list" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <div class="inbox-row selected" onclick="nav('quotes',document.querySelectorAll('.sb-item')[3])">
+            <div class="inbox-avatar" style="background:var(--info-light);color:var(--info)">GS</div>
+            <div class="inbox-body">
+              <div class="inbox-sender">Global Steel Inc.</div>
+              <div class="inbox-subject">Re: RFQ-2024-089 — Steel Coil Quote</div>
+              <div class="inbox-preview">Please find attached our competitive pricing for 500kg HR + 400kg CR coils…</div>
+            </div>
+            <div class="inbox-meta">
+              <div class="inbox-time">10:24</div>
+              <div class="inbox-tags"><span class="tag quote">Quote</span><span class="tag urgent">Urgent</span><span class="tag extracted">AI ✓</span></div>
+            </div>
+          </div>
+          <div class="inbox-row">
+            <div class="inbox-avatar" style="background:var(--accent-light);color:var(--accent)">PP</div>
+            <div class="inbox-body">
+              <div class="inbox-sender">Precision Parts Ltd.</div>
+              <div class="inbox-subject">Invoice #INV-8821 — Due May 30</div>
+              <div class="inbox-preview">Attached invoice for PO-2024-0221. Payment terms Net 30…</div>
+            </div>
+            <div class="inbox-meta">
+              <div class="inbox-time">9:15</div>
+              <div class="inbox-tags"><span class="tag invoice">Invoice</span><span class="tag matched">PO Matched ✓</span></div>
+            </div>
+          </div>
+          <div class="inbox-row">
+            <div class="inbox-avatar" style="background:var(--danger-light);color:var(--danger)">WH</div>
+            <div class="inbox-body">
+              <div class="inbox-sender">Warehouse (Internal)</div>
+              <div class="inbox-subject">URGENT: Line 3 down — need bearings</div>
+              <div class="inbox-preview">50 units SKU-4421 needed immediately, production halted…</div>
+            </div>
+            <div class="inbox-meta">
+              <div class="inbox-time">8:47</div>
+              <div class="inbox-tags"><span class="tag emergency">Emergency</span><span class="tag internal">Internal</span></div>
+            </div>
+          </div>
+          <div class="inbox-row">
+            <div class="inbox-avatar" style="background:#f0e8ff;color:#534AB7">AM</div>
+            <div class="inbox-body">
+              <div class="inbox-sender">Allied Metals Corp.</div>
+              <div class="inbox-subject">Updated Quote — RFQ-2024-089</div>
+              <div class="inbox-preview">Following our previous quote, we can offer improved terms…</div>
+            </div>
+            <div class="inbox-meta">
+              <div class="inbox-time">Yesterday</div>
+              <div class="inbox-tags"><span class="tag quote">Quote</span><span class="tag extracted">AI ✓</span></div>
+            </div>
+          </div>
+          <div class="inbox-row">
+            <div class="inbox-avatar" style="background:var(--success-light);color:var(--success)">MC</div>
+            <div class="inbox-body">
+              <div class="inbox-sender">Mark Chen (CFO)</div>
+              <div class="inbox-subject">Approval: PO-2024-0234 ($42,500)</div>
+              <div class="inbox-preview">Please review the attached purchase order before Friday…</div>
+            </div>
+            <div class="inbox-meta">
+              <div class="inbox-time">Yesterday</div>
+              <div class="inbox-tags"><span class="tag approval">Approval</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RFX MANAGER -->
+      <div class="screen" id="screen-rfx">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button class="filter-btn active">All (12)</button>
+          <button class="filter-btn">In Progress (7)</button>
+          <button class="filter-btn">Awaiting Quotes (3)</button>
+          <button class="filter-btn">Pending PO (2)</button>
+        </div>
+        <div class="rfq-pipeline">
+          <div class="rfq-card">
+            <div class="rfq-id">RFQ-2024-089</div>
+            <div class="rfq-name">Steel Coils — 500kg HR + 400kg CR</div>
+            <div class="pipeline-steps">
+              <div class="step done"><div class="step-dot"></div>RFQ Sent</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>Quotes In</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>Compared</div>
+              <div class="step-arrow">→</div>
+              <div class="step active"><div class="step-dot"></div>PO Draft</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Approved</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Payment</div>
+            </div>
+            <div class="rfq-meta"><span class="pending-badge">Awaiting CFO approval</span><button class="mini-btn" onclick="nav('quotes',document.querySelectorAll('.sb-item')[3])">View quotes →</button></div>
+          </div>
+          <div class="rfq-card">
+            <div class="rfq-id">RFQ-2024-087</div>
+            <div class="rfq-name">Industrial Bearings — 6204 Series × 200 units</div>
+            <div class="pipeline-steps">
+              <div class="step done"><div class="step-dot"></div>RFQ Sent</div>
+              <div class="step-arrow">→</div>
+              <div class="step active"><div class="step-dot"></div>Quotes In</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Compare</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>PO Draft</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Approved</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Payment</div>
+            </div>
+            <div class="rfq-meta"><span class="pending-badge">3 quotes received</span><button class="mini-btn">Compare now →</button></div>
+          </div>
+          <div class="rfq-card">
+            <div class="rfq-id" style="color:var(--danger)">EMG-2024-014</div>
+            <div class="rfq-name">Emergency Order — Line 3 Bearings × 50 units</div>
+            <div class="pipeline-steps">
+              <div class="step done"><div class="step-dot"></div>Requested</div>
+              <div class="step-arrow">→</div>
+              <div class="step active"><div class="step-dot"></div>PO Draft</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Approval</div>
+              <div class="step-arrow">→</div>
+              <div class="step"><div class="step-dot"></div>Sent</div>
+            </div>
+            <div class="rfq-meta"><span class="emg-badge">⚡ Emergency</span><button class="mini-btn" onclick="nav('po',document.querySelectorAll('.sb-item')[4])">Create PO →</button></div>
+          </div>
+          <div class="rfq-card">
+            <div class="rfq-id">RFQ-2024-085</div>
+            <div class="rfq-name">MRO Supplies — Q2 Restock (12 SKUs)</div>
+            <div class="pipeline-steps">
+              <div class="step done"><div class="step-dot"></div>RFQ Sent</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>Quotes In</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>Compared</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>PO Draft</div>
+              <div class="step-arrow">→</div>
+              <div class="step done"><div class="step-dot"></div>Approved</div>
+              <div class="step-arrow">→</div>
+              <div class="step active"><div class="step-dot"></div>Payment</div>
+            </div>
+            <div class="rfq-meta"><span style="font-size:10px;color:var(--success);font-family:var(--mono)">✓ PO sent · awaiting delivery</span><button class="mini-btn">Track →</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUOTE COMPARE -->
+      <div class="screen" id="screen-quotes">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">RFQ-2024-089 · Steel Coil</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:2px">3 quotes received · Winner selected</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">Export CSV</button>
+            <button class="btn primary" onclick="nav('po',document.querySelectorAll('.sb-item')[4])">Generate PO — Winner →</button>
+          </div>
+        </div>
+        <div class="winner-badge">★ Winner: Global Steel Inc. · Score 94/100</div>
+        <div style="overflow-x:auto">
+          <table class="quote-table" style="width:100%">
+            <thead>
+              <tr>
+                <th style="width:120px">Criteria</th>
+                <th>Allied Metals Corp.</th>
+                <th class="winner-header" style="border-radius:0">★ Global Steel Inc.</th>
+                <th>Midwest Supply Co.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label">Total price</td>
+                <td>$41,200.00</td>
+                <td class="winner-col">$38,450.00 <span class="best-badge">BEST</span></td>
+                <td>$39,900.00</td>
+              </tr>
+              <tr>
+                <td class="label">Lead time</td>
+                <td>21 days</td>
+                <td class="winner-col">14 days <span class="best-badge">BEST</span></td>
+                <td>18 days</td>
+              </tr>
+              <tr>
+                <td class="label">Payment terms</td>
+                <td>Net 30</td>
+                <td class="winner-col">Net 30</td>
+                <td>Net 45</td>
+              </tr>
+              <tr>
+                <td class="label">HR Coil / kg</td>
+                <td>$44.20</td>
+                <td class="winner-col">$42.50 <span class="best-badge">BEST</span></td>
+                <td>$43.80</td>
+              </tr>
+              <tr>
+                <td class="label">CR Coil / kg</td>
+                <td>$45.00</td>
+                <td class="winner-col">$43.00 <span class="best-badge">BEST</span></td>
+                <td>$43.50</td>
+              </tr>
+              <tr>
+                <td class="label">Overall score</td>
+                <td>
+                  <div class="score-bar"><div class="score-bg"><div class="score-fill" style="width:71%;background:var(--color-text-tertiary)"></div></div><span style="font-family:var(--mono);font-size:11px;color:var(--color-text-secondary)">71/100</span></div>
+                </td>
+                <td class="winner-col">
+                  <div class="score-bar"><div class="score-bg"><div class="score-fill" style="width:94%"></div></div><span style="font-family:var(--mono);font-size:11px">94/100</span></div>
+                </td>
+                <td>
+                  <div class="score-bar"><div class="score-bg"><div class="score-fill" style="width:80%;background:var(--accent)"></div></div><span style="font-family:var(--mono);font-size:11px;color:var(--color-text-secondary)">80/100</span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn primary" onclick="nav('po',document.querySelectorAll('.sb-item')[4])">Generate PO — Global Steel Inc. →</button>
+          <button class="btn">Reject Allied Metals + Midwest</button>
+        </div>
+      </div>
+
+      <!-- PO GENERATOR -->
+      <div class="screen" id="screen-po">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Draft PO-2024-0235 — Auto-generated</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:2px">from RFQ-2024-089 · Awaiting approval</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">Edit fields</button>
+            <button class="btn">Send for approval</button>
+            <button class="btn primary">Send to supplier →</button>
+          </div>
+        </div>
+        <div class="po-doc">
+          <div class="po-header">
+            <div>
+              <div class="po-company">ACME RETAIL CO.</div>
+              <div class="po-address">1400 Commerce Blvd, Chicago, IL 60601<br>procurement@acmeco.com</div>
+            </div>
+            <div class="po-title-block">
+              <div class="po-title">Purchase Order</div>
+              <div class="po-num">PO-2024-0235</div>
+              <div class="po-meta">Date: April 29, 2026<br>RFQ: RFQ-2024-089</div>
+            </div>
+          </div>
+          <div class="po-parties">
+            <div>
+              <div class="po-party-label">Vendor</div>
+              <div class="po-party-name">Global Steel Inc.</div>
+              <div class="po-party-detail">Sarah Wong, Account Manager<br>800 Steel Ave, Gary, IN 46401<br>swong@globalsteel.com</div>
+            </div>
+            <div>
+              <div class="po-party-label">Ship To</div>
+              <div class="po-party-name">Acme Retail Co.</div>
+              <div class="po-party-detail">Receiving Dept — Dock B<br>1400 Commerce Blvd<br>Chicago, IL 60601</div>
+            </div>
+          </div>
+          <table class="po-line-table" style="width:100%">
+            <thead>
+              <tr>
+                <th>#</th><th>Code</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td><td style="font-family:var(--mono);font-size:10px">SC2024-A</td>
+                <td>Hot Rolled Steel Coil, 2mm, Grade A36</td>
+                <td style="font-family:var(--mono)">500</td><td>kg</td>
+                <td style="font-family:var(--mono)">$42.50</td>
+                <td style="font-family:var(--mono)">$21,250.00</td>
+              </tr>
+              <tr>
+                <td>2</td><td style="font-family:var(--mono);font-size:10px">SC2024-B</td>
+                <td>Cold Rolled Steel Coil, 1.5mm, Grade 1008</td>
+                <td style="font-family:var(--mono)">400</td><td>kg</td>
+                <td style="font-family:var(--mono)">$43.00</td>
+                <td style="font-family:var(--mono)">$17,200.00</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="po-totals">
+            <div class="total-row"><span>Subtotal</span><span style="font-family:var(--mono)">$38,450.00</span></div>
+            <div class="total-row"><span>Tax (0%)</span><span style="font-family:var(--mono)">$0.00</span></div>
+            <div class="total-row"><span>Shipping</span><span style="font-family:var(--mono)">TBD</span></div>
+            <div class="total-row grand"><span>Total</span><span style="font-family:var(--mono)">$38,450.00</span></div>
+          </div>
+          <div class="po-footer">
+            <div>
+              <div class="sig-label">Authorized by</div>
+              <div class="sig-name">Sarah Martinez</div>
+              <div class="sig-status approved">✓ Procurement Manager</div>
+            </div>
+            <div>
+              <div class="sig-label">Approved by</div>
+              <div class="sig-name">Mark Chen, CFO</div>
+              <div class="sig-status pending">⏳ Pending approval</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVOICES -->
+      <div class="screen" id="screen-invoices">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:500">Invoices</div>
+          <div style="display:flex;gap:6px">
+            <button class="filter-btn active">All (6)</button>
+            <button class="filter-btn">Unmatched (2)</button>
+            <button class="filter-btn">Overdue (3)</button>
+          </div>
+        </div>
+        <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table" style="width:100%">
+            <thead>
+              <tr><th>Invoice #</th><th>Supplier</th><th>PO Ref</th><th>Amount</th><th>Due</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--brand)">INV-8821</td>
+                <td>Precision Parts Ltd.</td>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">PO-2024-0221</td>
+                <td style="font-family:var(--mono);font-weight:500">$12,400</td>
+                <td style="font-size:11px;font-family:var(--mono)">May 30</td>
+                <td><span class="tag matched">Matched ✓</span></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--brand)">INV-8819</td>
+                <td>Allied Metals Corp.</td>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">PO-2024-0218</td>
+                <td style="font-family:var(--mono);font-weight:500">$29,100</td>
+                <td style="font-size:11px;font-family:var(--mono);color:var(--danger)">Apr 15 ⚠</td>
+                <td><span class="tag urgent">Overdue</span></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--brand)">INV-8817</td>
+                <td>Global Steel Inc.</td>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">PO-2024-0215</td>
+                <td style="font-family:var(--mono);font-weight:500">$41,200</td>
+                <td style="font-size:11px;font-family:var(--mono);color:var(--danger)">Apr 10 ⚠</td>
+                <td><span class="tag urgent">Overdue</span></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--brand)">INV-8815</td>
+                <td>Midwest Supply Co.</td>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">—</td>
+                <td style="font-family:var(--mono);font-weight:500">$8,750</td>
+                <td style="font-size:11px;font-family:var(--mono)">May 15</td>
+                <td><span class="tag invoice">Unmatched</span></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--brand)">INV-8812</td>
+                <td>Precision Parts Ltd.</td>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">PO-2024-0210</td>
+                <td style="font-family:var(--mono);font-weight:500">$5,300</td>
+                <td style="font-size:11px;font-family:var(--mono)">Jun 01</td>
+                <td><span class="tag matched">Matched ✓</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="screen" id="screen-inventory">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:13px;font-weight:500">Inventory Intelligence</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:1px">AI reorder suggestions active</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">Set thresholds</button>
+            <button class="btn primary">⚡ Auto-reorder critical</button>
+          </div>
+        </div>
+        <div class="inv-grid">
+          <div class="panel">
+            <div class="panel-title">AI reorder forecast</div>
+            <div class="forecast-item">
+              <div><div style="font-size:12px;font-weight:500;color:var(--color-text-primary)">Industrial Bearings 6204</div><div class="forecast-sku">SKU-4421 · 8 in stock · threshold 15</div></div>
+              <div class="forecast-days crit">2 days</div>
+            </div>
+            <div class="forecast-item">
+              <div><div style="font-size:12px;font-weight:500;color:var(--color-text-primary)">Oil Filter HF-204</div><div class="forecast-sku">SKU-2211 · 12 in stock · threshold 20</div></div>
+              <div class="forecast-days warn">5 days</div>
+            </div>
+            <div class="forecast-item">
+              <div><div style="font-size:12px;font-weight:500;color:var(--color-text-primary)">Shaft Seal 40×55×8</div><div class="forecast-sku">SKU-3301 · 19 in stock · threshold 25</div></div>
+              <div class="forecast-days warn">8 days</div>
+            </div>
+            <div class="forecast-item">
+              <div><div style="font-size:12px;font-weight:500;color:var(--color-text-primary)">Hex Bolt M12×50</div><div class="forecast-sku">SKU-0889 · 240 in stock · threshold 50</div></div>
+              <div class="forecast-days ok">45+ days</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Suggested actions</div>
+            <button class="action-btn"><div class="dot" style="background:var(--danger)"></div><strong style="font-size:11px">Auto-RFQ: Bearings</strong><span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">URGENT</span></button>
+            <button class="action-btn"><div class="dot" style="background:var(--accent)"></div><span style="font-size:11px">Draft RFQ: Filters + Seals</span></button>
+            <button class="action-btn"><div class="dot" style="background:var(--info)"></div><span style="font-size:11px">View demand forecast →</span></button>
+            <button class="action-btn"><div class="dot" style="background:var(--brand)"></div><span style="font-size:11px">Configure auto-reorder rules</span></button>
+          </div>
+        </div>
+        <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table" style="width:100%">
+            <thead>
+              <tr><th>SKU</th><th>Product</th><th>In Stock</th><th>Reorder At</th><th>Level</th><th>AI Forecast</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--danger)">SKU-4421</td>
+                <td style="font-size:12px">Industrial Bearings 6204</td>
+                <td style="font-family:var(--mono);font-weight:500;color:var(--danger)">8</td>
+                <td style="font-family:var(--mono);font-size:11px">15</td>
+                <td><div class="inv-level"><div class="inv-fill" style="width:27%;background:var(--danger)"></div></div></td>
+                <td><span class="forecast-days crit" style="font-size:11px">Runs out in 2 days</span></td>
+                <td><button class="mini-btn" style="background:var(--danger-light);color:var(--danger);border-color:var(--danger)">⚡ Auto-RFQ</button></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--accent)">SKU-2211</td>
+                <td style="font-size:12px">Oil Filter HF-204</td>
+                <td style="font-family:var(--mono);font-weight:500;color:var(--accent)">12</td>
+                <td style="font-family:var(--mono);font-size:11px">20</td>
+                <td><div class="inv-level"><div class="inv-fill" style="width:40%;background:var(--accent)"></div></div></td>
+                <td><span class="forecast-days warn" style="font-size:11px">Runs out in 5 days</span></td>
+                <td><button class="mini-btn">Draft RFQ</button></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--accent)">SKU-3301</td>
+                <td style="font-size:12px">Shaft Seal 40×55×8</td>
+                <td style="font-family:var(--mono);font-weight:500;color:var(--accent)">19</td>
+                <td style="font-family:var(--mono);font-size:11px">25</td>
+                <td><div class="inv-level"><div class="inv-fill" style="width:52%;background:var(--accent)"></div></div></td>
+                <td><span class="forecast-days warn" style="font-size:11px">Runs out in 8 days</span></td>
+                <td><button class="mini-btn">Draft RFQ</button></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--success)">SKU-0889</td>
+                <td style="font-size:12px">Hex Bolt M12×50</td>
+                <td style="font-family:var(--mono);font-weight:500;color:var(--success)">240</td>
+                <td style="font-family:var(--mono);font-size:11px">50</td>
+                <td><div class="inv-level"><div class="inv-fill" style="width:88%;background:var(--brand)"></div></div></td>
+                <td><span class="forecast-days ok" style="font-size:11px">OK for 45+ days</span></td>
+                <td><button class="mini-btn">Monitor</button></td>
+              </tr>
+              <tr>
+                <td style="font-family:var(--mono);font-size:10px;color:var(--success)">SKU-1102</td>
+                <td style="font-size:12px">V-Belt A42</td>
+                <td style="font-family:var(--mono);font-weight:500;color:var(--success)">55</td>
+                <td style="font-family:var(--mono);font-size:11px">10</td>
+                <td><div class="inv-level"><div class="inv-fill" style="width:80%;background:var(--brand)"></div></div></td>
+                <td><span class="forecast-days ok" style="font-size:11px">OK for 30+ days</span></td>
+                <td><button class="mini-btn">Monitor</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const screens={
+  dashboard:{id:'screen-dashboard',title:'Good morning, Sarah',sub:'Wed, April 29 2026 · AI Auto-tagging active'},
+  inbox:{id:'screen-inbox',title:'Procurement Inbox',sub:'12 unread · AI Auto-tagging active'},
+  rfx:{id:'screen-rfx',title:'RFX Manager',sub:'12 active workflows · 4 open RFQs'},
+  quotes:{id:'screen-quotes',title:'Quote Comparison',sub:'RFQ-2024-089 · 3 quotes · winner selected'},
+  po:{id:'screen-po',title:'PO Generator',sub:'Draft PO-2024-0235 · Awaiting approval'},
+  invoices:{id:'screen-invoices',title:'Invoices',sub:'6 invoices · $91K due · 3 overdue'},
+  inventory:{id:'screen-inventory',title:'Inventory Intelligence',sub:'AI reorder suggestions active · 2 critical'}
+};
+function nav(key,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  const s=screens[key];
+  if(!s)return;
+  document.getElementById(s.id).classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('tb-title').textContent=s.title;
+  document.getElementById('tb-sub').textContent=s.sub;
+}
+document.querySelectorAll('.filter-btn').forEach(b=>{
+  b.addEventListener('click',function(){
+    const parent=this.parentElement;
+    parent.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>

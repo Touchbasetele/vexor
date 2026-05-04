@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vexor · Procurement intelligence</title>
+  <meta name="description" content="Vexor — automate procurement from RFQ to PO. Procurement intelligence for enterprise teams." />
+  <link rel="icon" href="/assets/vexor-mark.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --obsidian:#0D0A1E;
+    --cream:#FEFCE8;
+    --indigo:#4F35E8;
+    --violet:#7C5CFC;
+    --violet-soft:#9B7BFF;
+    --coral:#FF4F6A;
+    --coral-soft:#FF8B6A;
+    --brand:var(--indigo);
+    --brand-light:rgba(124,92,252,0.14);
+    --brand-mid:var(--violet);
+    --accent:var(--coral);
+    --accent-light:#FFE4EA;
+    --danger:#D93050;
+    --danger-light:#FCE8EC;
+    --info:var(--indigo);
+    --info-light:#E8E4FF;
+    --warn:#B45309;
+    --warn-light:#FEF3C7;
+    --success:#15803D;
+    --success-light:#DCFCE7;
+    --mono:'Courier New','DM Mono',monospace;
+    --sans:Georgia,'Times New Roman',Times,serif;
+    --color-background-primary:var(--cream);
+    --color-background-secondary:#F5F0DC;
+    --color-background-tertiary:#EDE9FE;
+    --color-border-secondary:#E8E4C0;
+    --color-border-tertiary:rgba(13,10,30,0.12);
+    --color-text-primary:#0D0A1E;
+    --color-text-secondary:#3A3A4A;
+    --color-text-tertiary:#6B6478;
+    --border-radius-md:8px;
+    --border-radius-lg:14px;
+  }
+  body{background:linear-gradient(165deg,#161022 0%,#2a2248 40%,#1a1630 100%);min-height:100vh;padding:clamp(8px,2vw,24px)}
+  .shell{display:flex;min-height:calc(100vh - 16px);max-width:1400px;margin:0 auto;background:var(--cream);border:1px solid rgba(79,53,232,0.22);border-radius:var(--border-radius-lg);overflow:hidden;font-family:var(--sans);box-shadow:0 24px 60px rgba(13,10,30,.35),0 0 0 1px rgba(254,252,232,0.04) inset}
+  .sidebar{width:228px;min-width:228px;background:var(--obsidian);border-right:1px solid rgba(254,252,232,0.08);display:flex;flex-direction:column;overflow-y:auto}
+  .sb-logo{padding:14px 12px 14px;border-bottom:1px solid rgba(124,92,252,0.25)}
+  .sb-brand-lockup{display:flex;align-items:flex-start;gap:10px}
+  .sb-mark{flex-shrink:0;width:44px;height:44px;border-radius:14px;box-shadow:0 4px 14px rgba(79,53,232,.45)}
+  .sb-brand-text{min-width:0;padding-top:2px}
+  .sb-logo .wordmark{font-size:17px;font-weight:700;color:var(--cream);letter-spacing:-0.06em;line-height:1.05}
+  .sb-tagline{font-family:var(--mono);font-size:7px;font-weight:500;color:var(--violet-soft);letter-spacing:0.28em;text-transform:uppercase;margin-top:6px;line-height:1.35;opacity:0.95}
+  .sb-tagline::after{content:'';display:block;width:40px;height:2px;border-radius:2px;background:var(--coral);margin-top:6px}
+  .sb-logo .tenant{font-size:10px;color:rgba(254,252,232,0.55);margin-top:10px;font-family:var(--mono);letter-spacing:0.04em}
+  .sb-section{padding:10px 0 4px}
+  .sb-label{font-size:9px;letter-spacing:0.22em;color:rgba(155,123,255,0.85);padding:0 14px 6px;text-transform:uppercase;font-family:var(--mono)}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:12px;color:rgba(254,252,232,0.72);transition:background .12s,color .12s;border-left:3px solid transparent;font-family:var(--sans)}
+  .sb-item:hover{background:rgba(124,92,252,0.08);color:var(--cream)}
+  .sb-item.active{background:rgba(79,53,232,0.38);color:var(--cream);border-left-color:var(--coral);font-weight:600}
+  .sb-item .badge{margin-left:auto;background:rgba(254,252,232,0.1);color:rgba(254,252,232,0.85);font-size:10px;padding:1px 7px;border-radius:10px;font-family:var(--mono)}
+  .sb-item.active .badge{background:rgba(255,79,106,0.25);color:#FFD6DD}
+  .sb-item .icon{width:14px;height:14px;opacity:0.75;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--cream)}
+  .topbar{background:var(--color-background-primary);border-bottom:1px solid var(--color-border-secondary);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;min-height:52px}
+  .topbar-title{font-size:15px;font-weight:700;color:var(--color-text-primary);letter-spacing:-0.03em}
+  .topbar-sub{font-size:11px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:3px;letter-spacing:0.04em}
+  .topbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{padding:6px 14px;border-radius:var(--border-radius-md);border:1px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-primary);transition:background .12s,border-color .12s,box-shadow .12s}
+  .btn:hover{background:var(--color-background-secondary);border-color:rgba(79,53,232,0.35)}
+  .btn.primary{background:var(--coral);color:var(--cream);border-color:#E63E56;font-weight:600;box-shadow:0 2px 12px rgba(255,79,106,.35)}
+  .btn.primary:hover{background:#FF6B82;border-color:#FF4F6A;box-shadow:0 4px 18px rgba(255,79,106,.42)}
+  .content{flex:1;overflow-y:auto;padding:16px 20px}
+  .screen{display:none}
+  .screen.active{display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  .stat-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+  .stat-label{font-size:10px;color:var(--color-text-tertiary);letter-spacing:0.5px;text-transform:uppercase;font-family:var(--mono)}
+  .stat-val{font-size:22px;font-weight:700;color:var(--color-text-primary);margin:4px 0 2px;letter-spacing:-1px}
+  .stat-sub{font-size:10px;font-family:var(--mono)}
+  .stat-sub.up{color:var(--success)}
+  .stat-sub.down{color:var(--danger)}
+  .stat-sub.warn{color:var(--accent)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .panel{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px}
+  .panel-title{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;font-family:var(--mono)}
+  .activity-item{padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+  .activity-item:last-child{border-bottom:none}
+  .activity-item .time{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:2px}
+  .activity-item strong{font-weight:500;color:var(--color-text-primary)}
+  .activity-item .desc{color:var(--color-text-secondary)}
+  .tag{display:inline-block;font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:10px;font-weight:500;margin-right:4px;vertical-align:middle}
+  .tag.quote{background:var(--info-light);color:var(--info)}
+  .tag.invoice{background:var(--accent-light);color:var(--accent)}
+  .tag.emergency{background:var(--danger-light);color:var(--danger)}
+  .tag.approval{background:#EDE9FE;color:var(--indigo)}
+  .tag.urgent{background:var(--danger-light);color:var(--danger)}
+  .tag.matched{background:var(--success-light);color:var(--success)}
+  .tag.extracted{background:var(--brand-light);color:var(--brand)}
+  .tag.internal{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .critical-stock{display:flex;flex-direction:column;gap:6px}
+  .stock-row{display:flex;align-items:center;gap:8px;font-size:12px}
+  .stock-row .sku{font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary);width:80px;min-width:80px}
+  .stock-row .name{flex:1;color:var(--color-text-secondary);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stock-row .count{font-family:var(--mono);font-size:11px;font-weight:500;min-width:28px;text-align:right}
+  .stock-row .count.crit{color:var(--danger)}
+  .stock-row .count.warn{color:var(--accent)}
+  .stock-bar{flex:1;height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden}
+  .stock-fill{height:100%;border-radius:2px}
+  .inbox-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .filter-btn{padding:4px 10px;border-radius:20px;border:0.5px solid var(--color-border-tertiary);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-secondary);transition:all 0.1s}
+  .filter-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .inbox-list{display:flex;flex-direction:column;gap:0}
+  .inbox-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background 0.1s;border-radius:0}
+  .inbox-row:hover{background:var(--color-background-secondary)}
+  .inbox-row.selected{background:var(--brand-light)}
+  .inbox-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+  .inbox-body{flex:1;min-width:0}
+  .inbox-sender{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+  .inbox-subject{font-size:11px;color:var(--brand);margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inbox-preview{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inbox-meta{text-align:right;flex-shrink:0}
+  .inbox-time{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono)}
+  .inbox-tags{margin-top:4px;display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+  .search-bar{display:flex;align-items:center;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 10px;margin-bottom:12px;gap:6px;background:var(--color-background-primary)}
+  .search-bar input{border:none;outline:none;background:transparent;font-size:12px;color:var(--color-text-primary);font-family:var(--sans);flex:1;width:100%}
+  .search-icon{font-size:12px;color:var(--color-text-tertiary)}
+  .quote-table{width:100%;border-collapse:collapse;font-size:12px}
+  .quote-table th{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--color-text-tertiary);font-family:var(--mono);padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .quote-table td{padding:10px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary)}
+  .quote-table tr:last-child td{border-bottom:none}
+  .quote-table .label{color:var(--color-text-primary);font-weight:500}
+  .winner-col{color:var(--brand);font-weight:500}
+  .winner-header{background:var(--brand-light);color:var(--brand)}
+  .best-badge{font-size:9px;background:var(--coral);color:var(--cream);padding:1px 5px;border-radius:8px;margin-left:4px;font-family:var(--mono);vertical-align:middle;font-weight:600}
+  .winner-badge{display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);font-size:10px;padding:3px 8px;border-radius:12px;font-family:var(--mono);font-weight:500;margin-bottom:12px}
+  .score-bar{display:inline-flex;align-items:center;gap:6px}
+  .score-fill{height:6px;border-radius:3px;background:var(--brand)}
+  .score-bg{width:60px;height:6px;border-radius:3px;background:var(--color-background-secondary)}
+  .po-doc{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:20px;font-size:12px;max-width:560px}
+  .po-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--color-border-tertiary)}
+  .po-company{font-size:16px;font-weight:700;color:var(--color-text-primary);letter-spacing:-0.5px}
+  .po-address{font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:4px;line-height:1.5}
+  .po-title-block{text-align:right}
+  .po-title{font-size:13px;font-weight:700;color:var(--brand);letter-spacing:1px;text-transform:uppercase}
+  .po-num{font-size:15px;font-weight:700;color:var(--color-text-primary);font-family:var(--mono)}
+  .po-meta{font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono);margin-top:4px}
+  .po-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .po-party-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--color-text-tertiary);font-family:var(--mono);margin-bottom:4px}
+  .po-party-name{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+  .po-party-detail{font-size:11px;color:var(--color-text-secondary);line-height:1.5;font-family:var(--mono)}
+  .po-line-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+  .po-line-table th{font-size:9px;text-transform:uppercase;letter-spacing:0.7px;color:var(--color-text-tertiary);font-family:var(--mono);padding:6px 8px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .po-line-table td{padding:8px 8px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary);vertical-align:top}
+  .po-line-table td:last-child{text-align:right;font-family:var(--mono)}
+  .po-totals{text-align:right;font-size:12px;margin-top:8px}
+  .po-totals .total-row{display:flex;justify-content:flex-end;gap:24px;padding:3px 0;color:var(--color-text-secondary)}
+  .po-totals .grand{font-weight:700;color:var(--color-text-primary);font-size:14px;border-top:1px solid var(--color-border-tertiary);padding-top:6px;margin-top:4px}
+  .po-footer{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)}
+  .sig-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--color-text-tertiary);font-family:var(--mono)}
+  .sig-name{font-size:11px;color:var(--color-text-primary);font-weight:500;margin-top:4px}
+  .sig-status{font-size:10px;font-family:var(--mono);margin-top:2px}
+  .sig-status.pending{color:var(--accent)}
+  .sig-status.approved{color:var(--success)}
+  .inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .inv-table{width:100%;border-collapse:collapse;font-size:12px}
+  .inv-table th{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--color-text-tertiary);font-family:var(--mono);padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+  .inv-table td{padding:10px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);vertical-align:middle}
+  .inv-level{height:6px;border-radius:3px;background:var(--color-background-secondary);width:80px;overflow:hidden}
+  .inv-fill{height:100%;border-radius:3px}
+  .forecast-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+  .forecast-item:last-child{border-bottom:none}
+  .forecast-sku{font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)}
+  .forecast-days{font-family:var(--mono);font-size:11px;font-weight:500}
+  .forecast-days.crit{color:var(--danger)}
+  .forecast-days.warn{color:var(--accent)}
+  .forecast-days.ok{color:var(--success)}
+  .action-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--color-text-primary);width:100%;margin-bottom:6px;transition:background 0.1s}
+  .action-btn:hover{background:var(--color-background-secondary)}
+  .action-btn .dot{width:6px;height:6px;border-radius:50%}
+  .rfq-pipeline{display:flex;flex-direction:column;gap:8px}
+  .rfq-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px}
+  .rfq-id{font-family:var(--mono);font-size:10px;color:var(--brand);font-weight:500}
+  .rfq-name{font-size:12px;font-weight:500;color:var(--color-text-primary);margin:2px 0 8px}
+  .pipeline-steps{display:flex;align-items:center;gap:0}
+  .step{display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);color:var(--color-text-tertiary)}
+  .step.done{color:var(--brand)}
+  .step.active{color:var(--accent)}
+  .step-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;background:transparent;flex-shrink:0}
+  .step.done .step-dot{background:currentColor}
+  .step-arrow{margin:0 4px;color:var(--color-text-tertiary);font-size:9px}
+  .pending-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(124,92,252,0.18);color:var(--indigo);font-size:9px;padding:2px 6px;border-radius:8px;font-family:var(--mono);font-weight:600}
+  .emg-badge{display:inline-flex;align-items:center;gap:3px;background:var(--danger-light);color:var(--danger);font-size:9px;padding:2px 6px;border-radius:8px;font-family:var(--mono)}
+  .rfq-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .mini-btn{padding:3px 8px;border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:transparent;font-size:10px;font-family:var(--mono);cursor:pointer;color:var(--color-text-secondary);transition:background 0.1s}
+  .mini-btn:hover{background:var(--brand-light);color:var(--brand);border-color:var(--brand)}
+  .topbar-status{display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);color:var(--success);padding:3px 8px;background:var(--success-light);border-radius:8px}
+  .pulse{width:6px;height:6px;border-radius:50%;background:var(--success)}
+  #automation-toast{position:fixed;bottom:20px;right:20px;background:var(--obsidian);color:var(--cream);padding:10px 14px;border-radius:var(--border-radius-md);font-size:12px;font-family:var(--mono);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;border:1px solid rgba(124,92,252,0.35);box-shadow:0 12px 40px rgba(13,10,30,.4)}
+  #automation-toast.show{opacity:1}
+  .topbar-shell{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:0}
+  .topbar-titles{flex:1;min-width:200px}
+  .glob-wrap{flex:2;min-width:220px;max-width:360px;position:relative}
+  .glob-wrap .search-bar{margin-bottom:0}
+  #search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--cream);border:1px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);box-shadow:0 14px 40px rgba(13,10,30,.14);max-height:min(340px,50vh);overflow-y:auto;display:none;z-index:60}
+  #search-results.open{display:block}
+  .sr-h{font-size:9px;text-transform:uppercase;letter-spacing:0.2em;color:var(--violet);padding:10px 12px 4px;font-family:var(--mono)}
+  .sr-row{padding:8px 12px;font-size:12px;border-bottom:1px solid rgba(13,10,30,0.06);cursor:pointer;font-family:var(--mono);}
+  .sr-row:hover{background:rgba(124,92,252,0.08)}
+  .sr-row:last-child{border-bottom:none}
+  .po-split{display:grid;grid-template-columns:minmax(228px,300px)1fr;gap:14px;align-items:start;}
+  .po-list-panel{border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);background:var(--color-background-secondary);max-height:min(72vh,720px);overflow-y:auto;}
+  .po-row{padding:10px 12px;border-bottom:1px solid var(--color-border-tertiary);cursor:pointer;display:flex;flex-direction:column;gap:4px;text-align:left;font:inherit;width:100%;background:transparent}
+  .po-row:hover{background:rgba(124,92,252,0.06)}
+  .po-row.active{background:rgba(124,92,252,0.14);border-left:3px solid var(--coral)}
+  .po-row .num{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--indigo)}
+  .analytics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{border:1px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:14px;background:linear-gradient(180deg,#faf8ea 0%, var(--cream) 100%);} 
+  .kpi .lbl{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:4px;}
+  .kpi .big{font-family:var(--sans);font-size:24px;font-weight:700;color:var(--obsidian);}
+  .kpi .sub{font-size:10px;color:var(--color-text-secondary);margin-top:4px;font-family:var(--mono)}
+  .vendor-row td,.vendor-row button{font-family:var(--mono);font-size:11px;}
+  #modal-overlay,.modal-overlay,.vex-modal-overlay{position:fixed;inset:0;background:rgba(13,10,30,0.55);display:none;align-items:center;justify-content:center;z-index:90;padding:20px;}
+  #modal-overlay.open,.modal-overlay.open,.vex-modal-overlay.open{display:flex}
+  #modal-pane{background:var(--cream);padding:22px;border-radius:var(--border-radius-lg);max-width:440px;width:100%;border:1px solid rgba(79,53,232,0.28);max-height:90vh;overflow-y:auto;}
+  #modal-title{font-family:var(--sans);font-size:17px;font-weight:700;margin-bottom:4px;color:var(--obsidian);}
+  #modal-desc{font-size:12px;color:var(--color-text-secondary);}
+  #modal-fields{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+  #modal-fields label{font-size:9px;text-transform:uppercase;letter-spacing:0.12em;font-family:var(--mono);color:var(--color-text-tertiary);}
+  #modal-fields input,#modal-fields textarea{font-size:13px;padding:8px;border-radius:var(--border-radius-md);border:1px solid var(--color-border-secondary);font-family:inherit;}
+  #modal-fields textarea{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+  .muted-note{font-size:11px;color:var(--color-text-tertiary);margin-top:8px;font-family:var(--mono);}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-brand-lockup">
+        <img class="sb-mark" src="/assets/vexor-mark.svg" width="44" height="44" alt="" decoding="async" aria-hidden="true" />
+        <div class="sb-brand-text">
+          <div class="wordmark" id="brand-wordmark">VEXOR</div>
+          <div class="sb-tagline">Procurement intelligence</div>
+        </div>
+      </div>
+      <div class="tenant" id="tenant-name">Acme Retail Co.</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Core</div>
+      <div class="sb-item active" id="sb-dashboard" onclick="nav('dashboard',this)"><span class="icon">▣</span>Dashboard</div>
+      <div class="sb-item" id="sb-inbox" onclick="nav('inbox',this)"><span class="icon">✉</span>Inbox<span class="badge" id="badge-inbox">12</span></div>
+      <div class="sb-item" id="sb-rfx" onclick="nav('rfx',this)"><span class="icon">≡</span>RFX Manager<span class="badge" id="badge-rfx">4</span></div>
+      <div class="sb-item" id="sb-quotes" onclick="nav('quotes',this)"><span class="icon">⚖</span>Quote Compare</div>
+      <div class="sb-item" id="sb-po" onclick="nav('po',this)"><span class="icon">◻</span>Purchase Orders</div>
+      <div class="sb-item" id="sb-req" onclick="nav('requisitions',this)"><span class="icon">＋</span>Requisitions</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Finance</div>
+      <div class="sb-item" id="sb-invoices" onclick="nav('invoices',this)"><span class="icon">≣</span>Invoices<span class="badge" id="badge-invoices">6</span></div>
+      <div class="sb-item" id="sb-approvals" onclick="nav('approvals',this)"><span class="icon">✔</span>Approvals<span class="badge" id="badge-approvals">2</span></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Intelligence</div>
+      <div class="sb-item" id="sb-inventory" onclick="nav('inventory',this)"><span class="icon">▦</span>Inventory</div>
+      <div class="sb-item" id="sb-vendors" onclick="nav('vendors',this)"><span class="icon">⊞</span>Vendors</div>
+      <div class="sb-item" id="sb-analytics" onclick="nav('analytics',this)"><span class="icon">↑↓</span>Analytics</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar" id="topbar">
+      <div class="topbar-shell">
+        <div class="glob-wrap">
+          <div class="search-bar">
+            <span class="search-icon">⌕</span>
+            <input id="global-search-q" type="search" autocomplete="off" placeholder="Search RFQs · inbox · invoices · vendors" />
+          </div>
+          <div id="search-results" role="listbox" aria-label="Global search"></div>
+        </div>
+        <div class="topbar-titles">
+          <div class="topbar-title" id="tb-title">Good morning, Sarah</div>
+          <div class="topbar-sub" id="tb-sub">Wed, April 29 2026 · AI Auto-tagging active</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-status"><div class="pulse"></div>AI Active</div>
+        <button type="button" class="btn" id="btn-ai-inbox" title="Run inbox automation (tagging / queue)">Run AI inbox</button>
+        <button type="button" class="btn" id="btn-new-rfq">+ New RFQ</button>
+        <button type="button" class="btn primary" id="btn-create-po">+ Create PO</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="screen active" id="screen-dashboard">
+        <div class="stat-grid" id="hydrate-stats"></div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Recent activity</div>
+            <div id="hydrate-activity"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Critical stock</div>
+            <div class="critical-stock" id="hydrate-stock"></div>
+            <div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--color-border-tertiary)">
+              <button type="button" class="action-btn" onclick="nav('inventory',document.getElementById('sb-inventory'))">
+                <div class="dot" style="background:var(--danger)"></div> View inventory intelligence →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INBOX -->
+      <div class="screen" id="screen-inbox">
+        <div class="search-bar">
+          <span class="search-icon">⌕</span>
+          <input id="inbox-q" type="text" placeholder="Search procurement emails…" />
+        </div>
+        <div class="inbox-filter" id="inbox-filter-bar">
+          <button type="button" class="filter-btn active" data-inbox-filter="all">All</button>
+          <button type="button" class="filter-btn" data-inbox-filter="quote">Quotes</button>
+          <button type="button" class="filter-btn" data-inbox-filter="invoice">Invoices</button>
+          <button type="button" class="filter-btn" data-inbox-filter="rfq">RFQ</button>
+          <button type="button" class="filter-btn" data-inbox-filter="emergency">Emergency</button>
+        </div>
+        <div class="inbox-list" style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <div id="hydrate-inbox"></div>
+        </div>
+      </div>
+
+      <!-- RFX MANAGER -->
+      <div class="screen" id="screen-rfx">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap" id="rfx-filter-bar">
+          <button type="button" class="filter-btn active" data-rfx-filter="all">All</button>
+          <button type="button" class="filter-btn" data-rfx-filter="in_progress">In progress</button>
+          <button type="button" class="filter-btn" data-rfx-filter="awaiting_quotes">Awaiting quotes</button>
+          <button type="button" class="filter-btn" data-rfx-filter="pending_po">Pending PO</button>
+          <button type="button" class="filter-btn" data-rfx-filter="emergency">Emergency</button>
+        </div>
+        <div class="rfq-pipeline" id="hydrate-rfq"></div>
+      </div>
+
+      <!-- QUOTE COMPARE -->
+      <div class="screen" id="screen-quotes">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--color-text-primary)" id="quote-title">RFQ-2024-089 · Steel Coil</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:2px" id="quote-subtitle">3 quotes received · Winner selected</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn" id="btn-quote-csv">Export CSV</button>
+            <button type="button" class="btn primary" onclick="nav('po',document.getElementById('sb-po'))">Generate PO — Winner →</button>
+          </div>
+        </div>
+        <div class="winner-badge" id="hydrate-winner-badge">★ Winner: Global Steel Inc. · Score 94/100</div>
+        <div style="overflow-x:auto">
+          <table class="quote-table" style="width:100%">
+            <thead id="hydrate-quote-thead"></thead>
+            <tbody id="hydrate-quote-tbody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="button" class="btn primary" onclick="nav('po',document.getElementById('sb-po'))">Generate PO — Global Steel Inc. →</button>
+          <button type="button" class="btn" id="btn-quote-reject">Reject runners-up</button>
+        </div>
+      </div>
+
+      <!-- PO WORKSPACE -->
+      <div class="screen" id="screen-po">
+        <div style="margin-bottom:10px" id="hydrate-po-toolbar"></div>
+        <div class="po-split">
+          <aside class="po-list-panel"><div id="hydrate-po-list"></div></aside>
+          <div><div class="po-doc" id="hydrate-po-doc"></div></div>
+        </div>
+      </div>
+
+      <!-- REQUISITIONS -->
+      <div class="screen" id="screen-requisitions">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:13px;font-weight:600">Requisitions</div>
+            <p class="muted-note">Internal requests from sales and departments · approvals create buying work.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn primary" id="btn-create-req">+ New requisition</button>
+          </div>
+        </div>
+        <div class="po-split">
+          <aside class="po-list-panel" style="max-height:min(72vh,720px);">
+            <div id="hydrate-req-list"></div>
+          </aside>
+          <div>
+            <div class="panel" style="margin-bottom:12px">
+              <div class="panel-title">Requisition details</div>
+              <div id="hydrate-req-detail" style="margin-top:10px"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title">Lines</div>
+              <div id="hydrate-req-lines" style="margin-top:10px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVOICES -->
+      <div class="screen" id="screen-invoices">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:500">Invoices</div>
+          <div style="display:flex;gap:6px" id="inv-filter-bar">
+            <button type="button" class="filter-btn active" data-inv-filter="all">All</button>
+            <button type="button" class="filter-btn" data-inv-filter="unmatched">Unmatched</button>
+            <button type="button" class="filter-btn" data-inv-filter="overdue">Overdue</button>
+          </div>
+        </div>
+        <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table" style="width:100%">
+            <thead>
+              <tr><th>Invoice #</th><th>Supplier</th><th>PO Ref</th><th>Amount</th><th>Due</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="hydrate-invoices"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="screen" id="screen-inventory">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:13px;font-weight:500">Inventory Intelligence</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);font-family:var(--mono);margin-top:1px">AI reorder suggestions active</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn" id="btn-inv-thresholds">Set thresholds</button>
+            <button type="button" class="btn primary" id="btn-auto-reorder-crit">⚡ Auto-reorder critical</button>
+          </div>
+        </div>
+        <div class="inv-grid">
+          <div class="panel">
+            <div class="panel-title">AI reorder forecast</div>
+            <div id="hydrate-forecast"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Suggested actions</div>
+            <button type="button" class="action-btn" id="act-auto-rfq-bear"><div class="dot" style="background:var(--danger)"></div><strong style="font-size:11px">Auto-RFQ: Bearings</strong><span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">URGENT</span></button>
+            <button type="button" class="action-btn" id="act-draft-rfq-filters"><div class="dot" style="background:var(--accent)"></div><span style="font-size:11px">Draft RFQ: Filters + seals</span></button>
+            <button type="button" class="action-btn" id="act-demand-forecast"><div class="dot" style="background:var(--info)"></div><span style="font-size:11px">View demand forecast →</span></button>
+            <button type="button" class="action-btn" id="act-reorder-rules"><div class="dot" style="background:var(--brand)"></div><span style="font-size:11px">Configure auto-reorder rules</span></button>
+          </div>
+        </div>
+        <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table" style="width:100%">
+            <thead>
+              <tr><th>SKU</th><th>Product</th><th>In Stock</th><th>Reorder At</th><th>Level</th><th>AI Forecast</th><th>Action</th></tr>
+            </thead>
+            <tbody id="hydrate-inventory"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- APPROVALS -->
+      <div class="screen" id="screen-approvals">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:13px;font-weight:600">Approval queue</div>
+            <p class="muted-note">Approve or reject CFO-level spend · linked POs refresh automatically.</p>
+          </div>
+        </div>
+        <div style="background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table" style="width:100%"><thead><tr><th>Type</th><th>Reference</th><th>Subject</th><th>Amount</th><th>Requester</th><th>Status</th><th>Actions</th></tr></thead><tbody id="hydrate-approvals"></tbody></table>
+        </div>
+      </div>
+
+      <!-- VENDORS -->
+      <div class="screen" id="screen-vendors">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+          <div style="font-size:13px;font-weight:600">Vendor directory</div>
+          <button type="button" class="btn primary" id="btn-add-vendor">+ Add vendor</button>
+        </div>
+        <div style="background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
+          <table class="inv-table vendor-row" style="width:100%"><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Rating</th><th>YTD Spend</th><th>Actions</th></tr></thead><tbody id="hydrate-vendors"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="screen" id="screen-analytics">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Spend intelligence</div>
+        <div id="hydrate-analytics-kpis" class="analytics-grid"></div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">RFQ workflow funnel</div>
+            <div id="hydrate-analytics-funnel"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Tier-1 vendor concentration</div>
+            <table class="inv-table" style="width:100%"><thead><tr><th>Vendor</th><th>YTD Spend</th><th>★</th></tr></thead><tbody id="hydrate-analytics-vendors"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="modal-overlay" class="vex-modal-overlay" aria-hidden="true">
+  <div id="modal-pane" role="dialog" aria-labelledby="modal-title">
+    <div id="modal-title">Modal</div>
+    <div id="modal-desc" class="muted-note"></div>
+    <div id="modal-fields"></div>
+    <div class="modal-actions"><button type="button" class="btn" id="modal-cancel">Cancel</button><button type="button" class="btn primary" id="modal-confirm">Save</button></div>
+  </div>
+</div>
+
+<div id="automation-toast" role="status" aria-live="polite"></div>
+
+<script>
+const screens={
+  dashboard:{id:'screen-dashboard',title:'Good morning, Sarah',sub:'Live workspace'},
+  inbox:{id:'screen-inbox',title:'Procurement Inbox',sub:'Live messages'},
+  rfx:{id:'screen-rfx',title:'RFX Manager',sub:'Pipeline synced'},
+  quotes:{id:'screen-quotes',title:'Quote Comparison',sub:'RFQ-2024-089 · Winner selected'},
+  po:{id:'screen-po',title:'Purchase orders',sub:'All PO documents'},
+  requisitions:{id:'screen-requisitions',title:'Requisitions',sub:'Internal requests & approvals'},
+  invoices:{id:'screen-invoices',title:'Invoices',sub:'Reconciliation'},
+  inventory:{id:'screen-inventory',title:'Inventory Intelligence',sub:'AI reorder runway'},
+  approvals:{id:'screen-approvals',title:'Approval queue',sub:'CFO approvals'},
+  vendors:{id:'screen-vendors',title:'Vendor directory',sub:'Supplier records'},
+  analytics:{id:'screen-analytics',title:'Spend intelligence',sub:'KPIs & funnel'},
+};
+function nav(key,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s=>s.classList.remove('active'));
+  const merged = window.PROCUREOS_SCREENS||screens;
+  const s=merged[key]||screens[key];
+  if(!s)return;
+  document.getElementById(s.id).classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('tb-title').textContent=s.title;
+  document.getElementById('tb-sub').textContent=s.sub;
+  window.dispatchEvent(new CustomEvent('vexor:nav',{detail:{key}}));
+}
+window.PROCUREOS_SCREENS = screens;
+window.nav = nav;
+</script>
+<script src="/js/dashboard.js" defer></script>
+</body>
+</html>
