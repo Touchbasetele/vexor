@@ -1,3 +1,6 @@
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
 function escapeHtmlSnippet(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -74,30 +77,6 @@ function serializePo(row) {
   return { ...rest, lines };
 }
 
-function formatMoneyUSD(amount) {
-  const n = Number(amount || 0);
-  const safe = Number.isFinite(n) ? n : 0;
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(safe);
-}
-
-function serializeRequisition(header, lines) {
-  if (!header) return null;
-  return {
-    ...header,
-    lines: (lines || []).map((l) => ({
-      id: l.id,
-      line_no: l.line_no,
-      line_type: l.line_type,
-      sku: l.sku,
-      description: l.description,
-      qty: l.qty,
-      uom: l.uom,
-      est_unit_cost: l.est_unit_cost,
-      preferred_vendor_code: l.preferred_vendor_code,
-    })),
-  };
-}
-
 function nextActivityOrder(db) {
   return db.prepare('SELECT COALESCE(MAX(sort_order), -1)+1 AS o FROM activity').get().o;
 }
@@ -124,7 +103,7 @@ export function registerApi(app, db) {
         .prepare(`SELECT COUNT(*) AS c FROM approval WHERE status = 'pending'`)
         .get().c;
       const vendorActive = db.prepare(`SELECT COUNT(*) AS c FROM vendor WHERE active = 1`).get().c;
-      const screens = formatMeta(meta, inboxUnread, criticalCount, rfqCount, approvalsPending, vendorActive);
+      const screens = formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending, vendorActive);
 
       res.json({
         tenant,
@@ -348,329 +327,6 @@ export function registerApi(app, db) {
     res.json(po);
   });
 
-  app.get('/api/requisitions', (_req, res) => {
-    const headers = db
-      .prepare(
-        `
-        SELECT r.id, r.req_number, r.status, r.requester, r.department, r.needed_by, r.notes, r.created_at,
-               (SELECT COUNT(*) FROM requisition_line l WHERE l.requisition_id = r.id) AS line_count,
-               (SELECT COALESCE(SUM(COALESCE(l.qty,0) * COALESCE(l.est_unit_cost,0)),0) FROM requisition_line l WHERE l.requisition_id = r.id) AS est_total
-        FROM requisition r
-        ORDER BY r.id DESC
-      `,
-      )
-      .all();
-    res.json(
-      headers.map((h) => ({
-        ...h,
-        est_total: formatMoneyUSD(h.est_total),
-      })),
-    );
-  });
-
-  app.get('/api/requisitions/:id', (req, res) => {
-    const id = +req.params.id;
-    const header = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id);
-    if (!header) return res.status(404).json({ error: 'Not found' });
-    const lines = db
-      .prepare(
-        `SELECT * FROM requisition_line WHERE requisition_id = ? ORDER BY sort_order ASC, id ASC`,
-      )
-      .all(id);
-    res.json(serializeRequisition(header, lines));
-  });
-
-  app.post('/api/requisitions', (req, res) => {
-    try {
-      const body = req.body || {};
-      const requester = (body.requester || '').toString().trim() || 'Requester';
-      const department = (body.department || '').toString().trim() || 'General';
-      const needed_by = (body.needed_by || '').toString().trim();
-      const notes = (body.notes || '').toString().trim();
-
-      const count = db.prepare(`SELECT COUNT(*) AS c FROM requisition`).get().c;
-      const yr = new Date().getFullYear();
-      const req_number = `REQ-${yr}-${String(count + 1).padStart(4, '0')}`;
-
-      const info = db
-        .prepare(
-          `INSERT INTO requisition (req_number, status, requester, department, needed_by, notes) VALUES (?,?,?,?,?,?)`,
-        )
-        .run(req_number, 'draft', requester, department, needed_by, notes);
-
-      const requisition_id = info.lastInsertRowid;
-      db.prepare(
-        `INSERT INTO requisition_line
-         (requisition_id, line_no, line_type, sku, description, qty, uom, est_unit_cost, preferred_vendor_code, sort_order)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      ).run(requisition_id, 1, 'item', '', 'Line item', 1, 'ea', 0, '', 0);
-
-      logActivity(
-        db,
-        'internal',
-        'Requisition created',
-        `<strong>${escapeHtmlSnippet(req_number)}</strong> drafted by ${escapeHtmlSnippet(requester)}.`,
-      );
-
-      const header = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(requisition_id);
-      const lines = db.prepare(`SELECT * FROM requisition_line WHERE requisition_id = ? ORDER BY sort_order, id`).all(requisition_id);
-      res.json({ ok: true, requisition: serializeRequisition(header, lines) });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.patch('/api/requisitions/:id', (req, res) => {
-    try {
-      const id = +req.params.id;
-      const existing = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id);
-      if (!existing) return res.status(404).json({ error: 'Not found' });
-      if (!['draft', 'submitted', 'approved'].includes(existing.status))
-        return res.status(409).json({ error: 'Requisition is locked' });
-
-      const p = req.body || {};
-      const allow = ['requester', 'department', 'needed_by', 'notes'];
-      const kv = {};
-      for (const k of allow) if (p[k] !== undefined) kv[k] = String(p[k] ?? '');
-      if (!Object.keys(kv).length) return res.status(400).json({ error: 'nothing to update' });
-
-      const keys = Object.keys(kv);
-      db.prepare(`UPDATE requisition SET ${keys.map((x) => `${x} = ?`).join(', ')} WHERE id = ?`).run(
-        ...keys.map((x) => kv[x]),
-        id,
-      );
-      res.json({ ok: true, requisition: db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id) });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/requisitions/:id/lines', (req, res) => {
-    try {
-      const requisition_id = +req.params.id;
-      const header = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(requisition_id);
-      if (!header) return res.status(404).json({ error: 'Not found' });
-      if (header.status !== 'draft') return res.status(409).json({ error: 'Lines can only be edited in draft' });
-
-      const body = req.body || {};
-      const line_type = (body.line_type || 'item').toString();
-      const sku = (body.sku || '').toString().trim();
-      const description = (body.description || 'Line item').toString().trim();
-      const qty = Number(body.qty ?? 1);
-      const uom = (body.uom || 'ea').toString().trim() || 'ea';
-      const est_unit_cost = body.est_unit_cost == null || body.est_unit_cost === '' ? null : Number(body.est_unit_cost);
-      const preferred_vendor_code = (body.preferred_vendor_code || '').toString().trim();
-
-      const nextNo = db
-        .prepare(`SELECT COALESCE(MAX(line_no),0)+1 AS n FROM requisition_line WHERE requisition_id = ?`)
-        .get(requisition_id).n;
-      const nextSort = db
-        .prepare(`SELECT COALESCE(MAX(sort_order),-1)+1 AS s FROM requisition_line WHERE requisition_id = ?`)
-        .get(requisition_id).s;
-
-      const info = db
-        .prepare(
-          `INSERT INTO requisition_line
-           (requisition_id, line_no, line_type, sku, description, qty, uom, est_unit_cost, preferred_vendor_code, sort_order)
-           VALUES (?,?,?,?,?,?,?,?,?,?)`,
-        )
-        .run(
-          requisition_id,
-          nextNo,
-          line_type,
-          sku,
-          description,
-          Number.isFinite(qty) ? qty : 0,
-          uom,
-          Number.isFinite(est_unit_cost) ? est_unit_cost : null,
-          preferred_vendor_code,
-          nextSort,
-        );
-
-      const line = db.prepare(`SELECT * FROM requisition_line WHERE id = ?`).get(info.lastInsertRowid);
-      res.json({ ok: true, line });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.patch('/api/requisition-lines/:lineId', (req, res) => {
-    try {
-      const id = +req.params.lineId;
-      const existing = db.prepare(`SELECT * FROM requisition_line WHERE id = ?`).get(id);
-      if (!existing) return res.status(404).json({ error: 'Not found' });
-      const header = db
-        .prepare(`SELECT id, status FROM requisition WHERE id = ?`)
-        .get(existing.requisition_id);
-      if (!header) return res.status(404).json({ error: 'Parent not found' });
-      if (header.status !== 'draft') return res.status(409).json({ error: 'Lines can only be edited in draft' });
-
-      const p = req.body || {};
-      const allow = ['line_type', 'sku', 'description', 'qty', 'uom', 'est_unit_cost', 'preferred_vendor_code'];
-      const kv = {};
-      for (const k of allow) if (p[k] !== undefined) kv[k] = p[k];
-      if (!Object.keys(kv).length) return res.status(400).json({ error: 'nothing to update' });
-
-      const set = [];
-      const vals = [];
-      for (const [k, v] of Object.entries(kv)) {
-        set.push(`${k} = ?`);
-        if (k === 'qty') vals.push(Number(v));
-        else if (k === 'est_unit_cost') vals.push(v == null || v === '' ? null : Number(v));
-        else vals.push(String(v ?? ''));
-      }
-      vals.push(id);
-      db.prepare(`UPDATE requisition_line SET ${set.join(', ')} WHERE id = ?`).run(...vals);
-      res.json({ ok: true, line: db.prepare(`SELECT * FROM requisition_line WHERE id = ?`).get(id) });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.delete('/api/requisition-lines/:lineId', (req, res) => {
-    try {
-      const id = +req.params.lineId;
-      const existing = db.prepare(`SELECT * FROM requisition_line WHERE id = ?`).get(id);
-      if (!existing) return res.status(404).json({ error: 'Not found' });
-      const header = db
-        .prepare(`SELECT id, status FROM requisition WHERE id = ?`)
-        .get(existing.requisition_id);
-      if (!header) return res.status(404).json({ error: 'Parent not found' });
-      if (header.status !== 'draft') return res.status(409).json({ error: 'Lines can only be edited in draft' });
-      db.prepare(`DELETE FROM requisition_line WHERE id = ?`).run(id);
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/requisitions/:id/submit', (req, res) => {
-    try {
-      const id = +req.params.id;
-      const header = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id);
-      if (!header) return res.status(404).json({ error: 'Not found' });
-      if (header.status !== 'draft') return res.status(409).json({ error: 'Only draft requisitions can be submitted' });
-
-      const est = db
-        .prepare(
-          `SELECT COALESCE(SUM(COALESCE(qty,0) * COALESCE(est_unit_cost,0)),0) AS total FROM requisition_line WHERE requisition_id = ?`,
-        )
-        .get(id).total;
-      const amount = formatMoneyUSD(est);
-
-      db.prepare(`UPDATE requisition SET status = 'submitted' WHERE id = ?`).run(id);
-      const sort = db.prepare(`SELECT COALESCE(MAX(sort_order), 0)+1 AS s FROM approval`).get().s;
-      db.prepare(
-        `INSERT INTO approval (document_type, reference, title, amount, requester, status, notes, sort_order)
-         VALUES (?,?,?,?,?,'pending',?,?)`,
-      ).run(
-        'REQ',
-        header.req_number,
-        `Requisition ${header.req_number}`,
-        amount,
-        header.requester || '',
-        (req.body?.notes || '').toString().trim(),
-        sort,
-      );
-
-      logActivity(
-        db,
-        'approval',
-        'Submitted',
-        `<strong>${escapeHtmlSnippet(header.req_number)}</strong> submitted for approval (${escapeHtmlSnippet(amount)}).`,
-      );
-
-      res.json({ ok: true, requisition: db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id) });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.post('/api/requisitions/:id/create-po', (req, res) => {
-    try {
-      const id = +req.params.id;
-      const header = db.prepare(`SELECT * FROM requisition WHERE id = ?`).get(id);
-      if (!header) return res.status(404).json({ error: 'Not found' });
-      if (header.status !== 'approved') return res.status(409).json({ error: 'Requisition must be approved before creating a PO' });
-
-      const lines = db
-        .prepare(
-          `SELECT line_no, sku, description, qty, uom, est_unit_cost, preferred_vendor_code
-           FROM requisition_line WHERE requisition_id = ? ORDER BY sort_order ASC, id ASC`,
-        )
-        .all(id);
-      if (!lines.length) return res.status(400).json({ error: 'Requisition has no lines' });
-
-      const vendorCodes = Array.from(
-        new Set(lines.map((l) => (l.preferred_vendor_code || '').trim()).filter(Boolean)),
-      );
-      const vendor_name =
-        vendorCodes.length === 1
-          ? db.prepare(`SELECT name FROM vendor WHERE code = ? AND active = 1`).get(vendorCodes[0])?.name || ''
-          : '';
-
-      const subtotal = lines.reduce((sum, l) => sum + Number(l.qty || 0) * Number(l.est_unit_cost || 0), 0);
-      const poLines = lines.map((l, idx) => ({
-        num: idx + 1,
-        code: (l.sku || '').trim() || '-',
-        desc: (l.description || '').trim() || '',
-        qty: String(l.qty ?? 0),
-        unit: (l.uom || 'ea').trim(),
-        price: formatMoneyUSD(l.est_unit_cost || 0),
-        total: formatMoneyUSD(Number(l.qty || 0) * Number(l.est_unit_cost || 0)),
-      }));
-
-      const cnt = db.prepare(`SELECT COUNT(*) AS c FROM po_documents`).get().c;
-      const po_number = `PO-${new Date().getFullYear()}-${String(cnt + 200).padStart(4, '0')}`;
-      const tenant = db.prepare(`SELECT name FROM tenant WHERE id=1`).get();
-      const buyer = tenant?.name || 'Buyer';
-      const ship = (req.body?.ship_to || '').toString().trim() || 'Receiving Dept';
-
-      db.prepare(
-        `
-        INSERT INTO po_documents (
-          status, header_title, header_sub, po_number, po_date, rfq_ref,
-          buyer_company, buyer_address, vendor_name, vendor_detail, ship_name, ship_detail,
-          lines_json, subtotal, tax, shipping, total,
-          auth_name, auth_status, approver_name, approver_status, sort_order
-        ) VALUES (
-          'draft', ?, ?, ?, date('now'), ?,
-          ?, 'Receiving address on file', ?, '', ?, ?,
-          ?, ?, '$0.00', '$0.00', ?,
-          ?, 'Draft', ?, '⏳ Not submitted', 980
-        )
-      `,
-      ).run(
-        `Draft ${po_number} · From ${header.req_number}`,
-        `Generated from requisition · ${header.department || 'General'}`,
-        po_number,
-        header.req_number,
-        buyer,
-        vendor_name,
-        ship,
-        ship,
-        JSON.stringify(poLines),
-        formatMoneyUSD(subtotal),
-        formatMoneyUSD(subtotal),
-        (req.body?.auth_name || header.requester || 'Requester').toString(),
-        (req.body?.approver_name || 'Approver').toString(),
-      );
-
-      db.prepare(`UPDATE requisition SET status = 'ordered' WHERE id = ?`).run(id);
-      logActivity(
-        db,
-        'extracted',
-        'PO drafted',
-        `<strong>${escapeHtmlSnippet(po_number)}</strong> created from ${escapeHtmlSnippet(header.req_number)}.`,
-      );
-
-      const po = serializePo(db.prepare(`SELECT * FROM po_documents WHERE po_number = ?`).get(po_number));
-      res.json({ ok: true, po_number, po });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
   app.post('/api/po-documents', (_req, res) => {
     try {
       const cnt = db.prepare(`SELECT COUNT(*) AS c FROM po_documents`).get().c;
@@ -850,12 +506,6 @@ export function registerApi(app, db) {
           `UPDATE po_documents SET approver_status = 'Rejected', header_sub='Return to procurement' WHERE po_number=?`,
         ).run(row.reference);
       }
-      if (row.document_type === 'REQ' && action === 'approve') {
-        db.prepare(`UPDATE requisition SET status = 'approved' WHERE req_number = ?`).run(row.reference);
-      }
-      if (row.document_type === 'REQ' && action === 'reject') {
-        db.prepare(`UPDATE requisition SET status = 'rejected' WHERE req_number = ?`).run(row.reference);
-      }
       logActivity(
         db,
         'approval',
@@ -979,5 +629,48 @@ export function registerApi(app, db) {
       processed: pending.length,
       messages: inbox.map((r) => ({ ...r, tags: JSON.parse(r.tags_json || '[]') })),
     });
+  });
+}
+
+export function registerAuthApi(app, knex) {
+  const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+
+  // Auth: login
+  app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    const user = await knex('users').where({ email }).first();
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    // For demo, skip bcrypt check if using placeholder hash
+    const valid = user.password_hash.startsWith('$2b$')
+      ? await bcrypt.compare(password, user.password_hash)
+      : password === 'admin';
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ id: user.id, role_id: user.role_id }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ token });
+  });
+
+  // Auth middleware
+  app.use('/api/products', (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No token' });
+    const token = authHeader.split(' ')[1];
+    try {
+      req.user = jwt.verify(token, JWT_SECRET);
+      next();
+    } catch {
+      res.status(401).json({ error: 'Invalid token' });
+    }
+  });
+
+  // Products CRUD (protected)
+  app.get('/api/products', async (req, res) => {
+    const products = await knex('products').select();
+    res.json(products);
+  });
+
+  app.post('/api/products', async (req, res) => {
+    const { sku, name, uom, cost, price } = req.body;
+    const [id] = await knex('products').insert({ sku, name, uom, cost, price });
+    res.json({ id });
   });
 }

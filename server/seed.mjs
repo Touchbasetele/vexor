@@ -20,8 +20,6 @@ db.exec(`
   DELETE FROM vendor;
   DELETE FROM approval;
   DELETE FROM analytics_kpi;
-  DELETE FROM requisition_line;
-  DELETE FROM requisition;
 `);
 
 db.prepare(`INSERT INTO tenant (id, name, wordmark) VALUES (1, 'Acme Retail Co.', 'VEXOR')`).run();
@@ -258,36 +256,6 @@ const insAppr = db.prepare(
    VALUES (?,?,?,?,?,?,?,?)`
 );
 appr.forEach((r) => insAppr.run(...r));
-
-// Requisitions (internal requests)
-const reqIns = db.prepare(
-  `INSERT INTO requisition (req_number, status, requester, department, needed_by, notes) VALUES (?,?,?,?,?,?)`,
-);
-const reqLineIns = db.prepare(
-  `INSERT INTO requisition_line
-   (requisition_id, line_no, line_type, sku, description, qty, uom, est_unit_cost, preferred_vendor_code, sort_order)
-   VALUES (?,?,?,?,?,?,?,?,?,?)`,
-);
-
-reqIns.run('REQ-2026-0001', 'draft', 'Amina (Store Ops)', 'Store Ops', '2026-05-10', 'Restock for Memorial Day');
-const req1 = db.prepare(`SELECT id FROM requisition WHERE req_number = 'REQ-2026-0001'`).get();
-reqLineIns.run(req1.id, 1, 'item', 'SKU-0889', 'Hex Bolt M12x50', 500, 'ea', 0.12, 'MWS', 0);
-reqLineIns.run(req1.id, 2, 'item', 'SKU-2211', 'Oil Filter HF-204', 30, 'ea', 8.5, 'MWS', 1);
-
-reqIns.run('REQ-2026-0002', 'submitted', 'Leo (Facilities)', 'Facilities', '2026-05-07', 'Emergency HVAC service');
-const req2 = db.prepare(`SELECT id FROM requisition WHERE req_number = 'REQ-2026-0002'`).get();
-reqLineIns.run(req2.id, 1, 'service', '', 'HVAC service call (warehouse)', 1, 'job', 950, '', 0);
-
-insAppr.run(
-  'REQ',
-  'REQ-2026-0002',
-  'Requisition REQ-2026-0002',
-  '$950.00',
-  'Leo (Facilities)',
-  'pending',
-  'Facilities manager approval',
-  2,
-);
 
 const kpis = [
   ['mtd_spend', 'Month spend (est.)', '$328K', '+9% vs last month', 'warn'],

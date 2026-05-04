@@ -14,8 +14,6 @@ const state = {
   vendors: [],
   approvals: [],
   analytics: null,
-  requisitions: [],
-  selectedReqId: null,
 };
 
 function escapeHtml(s) {
@@ -368,282 +366,6 @@ function renderPoBody(po) {
       po.approver_status,
     )}</div></div>
   </div>`;
-}
-
-/** --- Requisitions --- */
-
-function reqStatusTag(status) {
-  const cls =
-    status === 'approved' ? 'matched' : status === 'submitted' ? 'approval' : status === 'rejected' ? 'urgent' : 'internal';
-  return `<span class="tag ${escapeHtml(cls)}">${escapeHtml(status || '')}</span>`;
-}
-
-function reqListRow(r) {
-  return `<button type="button" class="po-row" data-select-req="${escapeHtml(String(r.id))}">
-    <div class="num">${escapeHtml(r.req_number)}</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      ${reqStatusTag(r.status)}
-      <span style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">${escapeHtml(
-        r.department || '',
-      )}</span>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">${escapeHtml(
-        r.needed_by || '',
-      )}</span>
-    </div>
-    <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${escapeHtml(
-      r.requester || '',
-    )} · ${escapeHtml(String(r.line_count || 0))} lines · <strong style="font-family:var(--mono)">${escapeHtml(
-      r.est_total || '',
-    )}</strong></div>
-  </button>`;
-}
-
-function renderReqList() {
-  const el = document.getElementById('hydrate-req-list');
-  if (!el) return;
-  if (!state.requisitions.length) {
-    el.innerHTML = `<div style="padding:14px;color:var(--color-text-secondary);font-size:12px;">No requisitions yet.</div>`;
-    return;
-  }
-  el.innerHTML = state.requisitions.map(reqListRow).join('');
-  document.querySelectorAll('[data-select-req]').forEach((b) =>
-    b.addEventListener('click', async () => openRequisition(+b.getAttribute('data-select-req'))),
-  );
-}
-
-function reqDetailHtml(req) {
-  const row = (label, value) =>
-    `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid rgba(13,10,30,0.06)">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.12em">${escapeHtml(
-        label,
-      )}</div>
-      <div style="font-size:12px;color:var(--color-text-primary);text-align:right">${escapeHtml(value || '')}</div>
-    </div>`;
-
-  const actions = [];
-  actions.push(`<button type="button" class="btn" data-req-act="edit">Edit</button>`);
-  if (req.status === 'draft') actions.push(`<button type="button" class="btn primary" data-req-act="submit">Submit for approval</button>`);
-  if (req.status === 'approved') actions.push(`<button type="button" class="btn primary" data-req-act="create-po">Create PO draft →</button>`);
-  if (req.status === 'submitted') actions.push(`<button type="button" class="btn" data-req-act="goto-approvals">View in approvals</button>`);
-
-  return `
-    <div id="req-detail-root" data-req-id="${escapeHtml(String(req.id))}">
-      ${row('Requisition', req.req_number)}
-      ${row('Status', req.status)}
-      ${row('Requester', req.requester)}
-      ${row('Department', req.department)}
-      ${row('Needed By', req.needed_by)}
-      ${row('Notes', req.notes)}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${actions.join('')}</div>
-    </div>
-  `;
-}
-
-function reqLinesHtml(req) {
-  const canEdit = req.status === 'draft';
-  const header = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--color-text-tertiary)">${
-        canEdit ? 'Edit lines in draft · submit for approval when ready' : 'Lines locked after submission'
-      }</div>
-      ${canEdit ? `<button type="button" class="btn" data-req-line-act="add">+ Add line</button>` : ``}
-    </div>
-  `;
-  const rows = (req.lines || []).length
-    ? `
-      <div style="overflow-x:auto;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden">
-        <table class="inv-table" style="width:100%">
-          <thead><tr><th>#</th><th>Type</th><th>SKU</th><th>Description</th><th>Qty</th><th>UOM</th><th>Est Unit</th><th>Vendor</th><th>Actions</th></tr></thead>
-          <tbody>
-            ${(req.lines || [])
-              .map((ln) => {
-                const acts = canEdit
-                  ? `<button type="button" class="mini-btn" data-req-line-edit="${escapeHtml(String(ln.id))}">Edit</button>
-                     <button type="button" class="mini-btn" data-req-line-del="${escapeHtml(String(ln.id))}">Del</button>`
-                  : `<span style="font-size:10px;color:var(--color-text-tertiary);font-family:var(--mono)">—</span>`;
-                return `<tr>
-                  <td style="font-family:var(--mono)">${escapeHtml(String(ln.line_no || ''))}</td>
-                  <td style="font-family:var(--mono);font-size:10px">${escapeHtml(ln.line_type || '')}</td>
-                  <td style="font-family:var(--mono);font-size:10px;color:var(--brand)">${escapeHtml(ln.sku || '')}</td>
-                  <td>${escapeHtml(ln.description || '')}</td>
-                  <td style="font-family:var(--mono)">${escapeHtml(String(ln.qty ?? ''))}</td>
-                  <td style="font-family:var(--mono)">${escapeHtml(ln.uom || '')}</td>
-                  <td style="font-family:var(--mono)">${escapeHtml(String(ln.est_unit_cost ?? ''))}</td>
-                  <td style="font-family:var(--mono)">${escapeHtml(ln.preferred_vendor_code || '')}</td>
-                  <td>${acts}</td>
-                </tr>`;
-              })
-              .join('')}
-          </tbody>
-        </table>
-      </div>
-    `
-    : `<div style="padding:10px 0;color:var(--color-text-secondary);font-size:12px;">No lines.</div>`;
-
-  return header + rows;
-}
-
-async function reloadRequisitions() {
-  state.requisitions = await fetchJson('/api/requisitions');
-  renderReqList();
-  if (!state.selectedReqId && state.requisitions.length) state.selectedReqId = state.requisitions[0].id;
-  if (state.selectedReqId) await openRequisition(state.selectedReqId, true);
-}
-
-async function openRequisition(id, silent = false) {
-  state.selectedReqId = id;
-  document.querySelectorAll('[data-select-req]').forEach((b) =>
-    b.classList.toggle('active', +b.getAttribute('data-select-req') === id),
-  );
-  const req = await fetchJson(`/api/requisitions/${id}`);
-  const d = document.getElementById('hydrate-req-detail');
-  const l = document.getElementById('hydrate-req-lines');
-  if (d) d.innerHTML = reqDetailHtml(req);
-  if (l) l.innerHTML = reqLinesHtml(req);
-  bindReqDetailActions(req);
-  bindReqLineActions(req);
-  if (!silent) toast(`Opened ${req.req_number}`);
-}
-
-function bindReqDetailActions(req) {
-  const root = document.getElementById('req-detail-root');
-  if (!root || root.dataset.bound === '1') return;
-  root.dataset.bound = '1';
-  root.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-req-act]');
-    if (!b) return;
-    const act = b.getAttribute('data-req-act');
-    const id = req.id;
-    try {
-      if (act === 'edit') {
-        openModal({
-          title: 'Edit requisition',
-          desc: 'Drafts can be changed; submissions lock line edits.',
-          fields: [
-            { key: 'requester', label: 'Requester', value: req.requester || '', placeholder: 'Name' },
-            { key: 'department', label: 'Department', value: req.department || '', placeholder: 'e.g. Sales' },
-            { key: 'needed_by', label: 'Needed by (YYYY-MM-DD)', value: req.needed_by || '', placeholder: '2026-05-10' },
-            { key: 'notes', label: 'Notes', value: req.notes || '', placeholder: '', large: true },
-          ],
-          confirm: 'Save requisition',
-          onConfirm: async (vals) => {
-            await fetchJson(`/api/requisitions/${id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(vals),
-            });
-            toast('Requisition updated.');
-            await reloadRequisitions();
-          },
-        });
-      }
-      if (act === 'submit') {
-        await fetchJson(`/api/requisitions/${id}/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        toast('Submitted for approval.');
-        await reloadApprovalsBadge();
-        await reloadRequisitions();
-      }
-      if (act === 'goto-approvals') navSafe('approvals', document.getElementById('sb-approvals'));
-      if (act === 'create-po') {
-        const out = await fetchJson(`/api/requisitions/${id}/create-po`, { method: 'POST' });
-        toast(`Drafted ${out.po_number}`);
-        await refreshPoSummaries();
-        navSafe('po', document.getElementById('sb-po'));
-      }
-    } catch (err) {
-      toast(String(err.message || err));
-    }
-  });
-}
-
-function bindReqLineActions(req) {
-  const root = document.getElementById('hydrate-req-lines');
-  if (!root || root.dataset.bound === '1') return;
-  root.dataset.bound = '1';
-
-  root.addEventListener('click', async (e) => {
-    const addBtn = e.target.closest('[data-req-line-act="add"]');
-    if (addBtn) {
-      openModal({
-        title: 'Add requisition line',
-        desc: 'Use SKU for stocked items; use Service for vendor work.',
-        fields: [
-          { key: 'line_type', label: 'Type (item|service)', value: 'item', placeholder: 'item' },
-          { key: 'sku', label: 'SKU', value: '', placeholder: 'SKU-0889' },
-          { key: 'description', label: 'Description', value: '', placeholder: 'Line description' },
-          { key: 'qty', label: 'Qty', value: '1', placeholder: '1' },
-          { key: 'uom', label: 'UOM', value: 'ea', placeholder: 'ea' },
-          { key: 'est_unit_cost', label: 'Est unit cost', value: '', placeholder: 'e.g. 12.50' },
-          { key: 'preferred_vendor_code', label: 'Vendor code', value: '', placeholder: 'MWS' },
-        ],
-        confirm: 'Add line',
-        onConfirm: async (vals) => {
-          await fetchJson(`/api/requisitions/${req.id}/lines`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(vals),
-          });
-          toast('Line added.');
-          await openRequisition(req.id, true);
-          await reloadRequisitions();
-        },
-      });
-      return;
-    }
-
-    const edit = e.target.closest('[data-req-line-edit]');
-    if (edit) {
-      const lineId = +edit.getAttribute('data-req-line-edit');
-      const ln = (req.lines || []).find((x) => x.id === lineId);
-      if (!ln) return;
-      openModal({
-        title: 'Edit line',
-        desc: 'Edits are allowed in draft.',
-        fields: [
-          { key: 'line_type', label: 'Type (item|service)', value: ln.line_type || 'item', placeholder: 'item' },
-          { key: 'sku', label: 'SKU', value: ln.sku || '', placeholder: '' },
-          { key: 'description', label: 'Description', value: ln.description || '', placeholder: '' },
-          { key: 'qty', label: 'Qty', value: String(ln.qty ?? ''), placeholder: '' },
-          { key: 'uom', label: 'UOM', value: ln.uom || 'ea', placeholder: '' },
-          { key: 'est_unit_cost', label: 'Est unit cost', value: ln.est_unit_cost == null ? '' : String(ln.est_unit_cost), placeholder: '' },
-          { key: 'preferred_vendor_code', label: 'Vendor code', value: ln.preferred_vendor_code || '', placeholder: '' },
-        ],
-        confirm: 'Save line',
-        onConfirm: async (vals) => {
-          await fetchJson(`/api/requisition-lines/${lineId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(vals),
-          });
-          toast('Line updated.');
-          await openRequisition(req.id, true);
-          await reloadRequisitions();
-        },
-      });
-      return;
-    }
-
-    const del = e.target.closest('[data-req-line-del]');
-    if (del) {
-      const lineId = +del.getAttribute('data-req-line-del');
-      openModal({
-        title: 'Delete line?',
-        desc: 'This removes the line from the draft requisition.',
-        fields: [],
-        confirm: 'Delete',
-        onConfirm: async () => {
-          await fetchJson(`/api/requisition-lines/${lineId}`, { method: 'DELETE' });
-          toast('Line deleted.');
-          await openRequisition(req.id, true);
-          await reloadRequisitions();
-        },
-      });
-    }
-  });
 }
 
 async function refreshPoSummaries(selectId = null) {
@@ -1055,11 +777,6 @@ async function hydrate() {
 
   state.approvals = await fetchJson('/api/approvals');
   renderApprovalsList();
-  try {
-    await reloadRequisitions();
-  } catch {
-    /* ignore */
-  }
 
   const analytics = await fetchJson('/api/analytics/overview');
   renderAnalytics(analytics);
@@ -1076,7 +793,6 @@ function syncTopbarTitles() {
     'sb-rfx': 'rfx',
     'sb-quotes': 'quotes',
     'sb-po': 'po',
-    'sb-req': 'requisitions',
     'sb-invoices': 'invoices',
     'sb-inventory': 'inventory',
     'sb-approvals': 'approvals',
@@ -1149,30 +865,6 @@ function wireChrome() {
       toast(String(e.message || e));
     }
   });
-
-  document.getElementById('btn-create-req')?.addEventListener('click', () =>
-    openModal({
-      title: 'New requisition',
-      desc: 'Create an internal request for purchasing or service work.',
-      fields: [
-        { key: 'requester', label: 'Requester', value: 'Requester', placeholder: 'Name' },
-        { key: 'department', label: 'Department', value: 'General', placeholder: 'Sales · Store Ops · Facilities' },
-        { key: 'needed_by', label: 'Needed by (YYYY-MM-DD)', value: '', placeholder: '2026-05-10' },
-        { key: 'notes', label: 'Notes', value: '', placeholder: '', large: true },
-      ],
-      confirm: 'Create requisition',
-      onConfirm: async (vals) => {
-        const created = await fetchJson('/api/requisitions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(vals),
-        });
-        toast(`Created ${created.requisition?.req_number || 'requisition'}`);
-        await reloadRequisitions();
-        navSafe('requisitions', document.getElementById('sb-req'));
-      },
-    }),
-  );
 
   document.getElementById('global-search-q').addEventListener('input', (e) => {
     clearTimeout(_searchT);
@@ -1415,11 +1107,7 @@ function wireChrome() {
     openThresholdModal(skuCell.getAttribute('data-inv-sku'));
   });
 
-  window.addEventListener('vexor:nav', (ev) => {
-    syncTopbarTitles();
-    const key = ev?.detail?.key;
-    if (key === 'requisitions') reloadRequisitions().catch(() => {});
-  });
+  window.addEventListener('vexor:nav', () => syncTopbarTitles());
 }
 
 document.addEventListener('DOMContentLoaded', () => {

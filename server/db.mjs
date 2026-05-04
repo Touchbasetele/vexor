@@ -213,31 +213,6 @@ export function migrate() {
       sub TEXT,
       accent TEXT
     );
-
-    CREATE TABLE IF NOT EXISTS requisition (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      req_number TEXT UNIQUE NOT NULL,
-      status TEXT NOT NULL DEFAULT 'draft',
-      requester TEXT,
-      department TEXT,
-      needed_by TEXT,
-      notes TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS requisition_line (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      requisition_id INTEGER NOT NULL REFERENCES requisition(id) ON DELETE CASCADE,
-      line_no INTEGER,
-      line_type TEXT DEFAULT 'item',
-      sku TEXT,
-      description TEXT,
-      qty REAL DEFAULT 0,
-      uom TEXT DEFAULT 'ea',
-      est_unit_cost REAL,
-      preferred_vendor_code TEXT,
-      sort_order INTEGER DEFAULT 0
-    );
   `);
 
   if (!columnExists('rfq', 'workflow_stage')) {
