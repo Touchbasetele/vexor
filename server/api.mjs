@@ -30,49 +30,90 @@ function stringifyCsv(cell) {
   return t;
 }
 
-function formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending, vendorActive) {
+function formatMeta(meta, inboxUnread, criticalStock, rfqCount, approvalsPending, vendorActive, db) {
   const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
   const dateStr = new Intl.DateTimeFormat('en-US', opts).format(new Date());
+
+  let quotesSub = 'No active comparison';
+  try {
+    const qcRow = db.prepare('SELECT rfq_code, vendors_json FROM quote_compare WHERE id = 1').get();
+    if (qcRow) {
+      const vendors = JSON.parse(qcRow.vendors_json || '[]');
+      const n = Array.isArray(vendors) ? vendors.length : 0;
+      quotesSub = `${qcRow.rfq_code} · ${n} vendor quote${n === 1 ? '' : 's'}`;
+    }
+  } catch {
+    /* ignore */
+  }
+
   return {
     dashboard: {
       title: `${meta.greeting}, ${meta.user_name}`,
-      sub: `${dateStr} · AI Auto-tagging active`,
+      sub: dateStr,
     },
     inbox: {
-      title: 'Procurement Inbox',
-      sub: `${inboxUnread} messages · synced`,
+      title: 'Procurement inbox',
+      sub: `${inboxUnread} unread`,
     },
     rfx: {
-      title: 'RFX Manager',
-      sub: `${rfqCount} RFQs · pipeline synced`,
+      title: 'RFX manager',
+      sub: `${rfqCount} RFQs`,
     },
     quotes: {
-      title: 'Quote Comparison',
-      sub: 'RFQ-2024-089 · 3 quotes · winner selected',
+      title: 'Quote comparison',
+      sub: quotesSub,
     },
     po: {
       title: 'Purchase orders',
-      sub: 'Select a PO · drafts & approvals',
+      sub: 'Drafts and approvals',
     },
     invoices: {
       title: 'Invoices',
-      sub: 'Match & reconcile',
+      sub: 'Match and reconcile',
     },
     inventory: {
-      title: 'Inventory Intelligence',
-      sub: `AI reorder suggestions · ${criticalStock} critical`,
+      title: 'Inventory',
+      sub: `${criticalStock} critical SKUs`,
     },
     approvals: {
       title: 'Approval queue',
-      sub: `${approvalsPending} pending · CFO & procurement workflow`,
+      sub: `${approvalsPending} pending`,
     },
     vendors: {
       title: 'Vendor directory',
-      sub: `${vendorActive} Tier-1 partners · ratings & spend`,
+      sub: `${vendorActive} active vendors`,
     },
     analytics: {
-      title: 'Spend & ops analytics',
-      sub: 'Procurement KPIs · funnel & vendor concentration',
+      title: 'Spend analytics',
+      sub: 'KPIs and funnel',
+    },
+    requisitions: {
+      title: 'Requisitions',
+      sub: 'Internal purchase requests (REQ)',
+    },
+    po_transfer: {
+      title: 'PO transfer',
+      sub: 'Intercompany or cross-site PO transfers',
+    },
+    sales_orders: {
+      title: 'Sales orders',
+      sub: 'Demand and back-to-back buy links',
+    },
+    receiving: {
+      title: 'Receiving',
+      sub: 'ASN, GRN, and putaway',
+    },
+    vendor_items: {
+      title: 'Vendor items',
+      sub: 'Vendor SKU matrix, UoM, and price breaks',
+    },
+    catalog_items: {
+      title: 'Catalog items',
+      sub: 'Enterprise item master and categories',
+    },
+    contracts: {
+      title: 'Contracts',
+      sub: 'Supplier agreements and tier spend',
     },
   };
 }
@@ -119,7 +160,7 @@ export function registerApi(app, db) {
         .prepare(`SELECT COUNT(*) AS c FROM approval WHERE status = 'pending'`)
         .get().c;
       const vendorActive = db.prepare(`SELECT COUNT(*) AS c FROM vendor WHERE active = 1`).get().c;
-      const screens = formatMeta(meta, inboxUnread, criticalCount, rfqCount, approvalsPending, vendorActive);
+      const screens = formatMeta(meta, inboxUnread, criticalCount, rfqCount, approvalsPending, vendorActive, db);
 
       res.json({
         tenant,

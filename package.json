@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.mjs",
-    "dev": "node --watch server/index.mjs",
+    "dev": "concurrently -k \"node --watch server/index.mjs\" \"vite --config client/vite.config.ts\"",
+    "dev:server": "node --watch server/index.mjs",
+    "build": "vite build --config client/vite.config.ts",
     "check": "node --check server/index.mjs && node --check server/api.mjs && node --check server/api/v1/index.js",
     "migrate": "knex migrate:latest",
     "seed": "node server/seed.mjs",
@@ -16,6 +18,8 @@
     "node": ">=18"
   },
   "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.10.0",
     "compression": "^1.8.1",
@@ -28,5 +32,13 @@
     "morgan": "^1.10.1",
     "pg": "^8.20.0",
     "zod": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6"
   }
 }

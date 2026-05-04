@@ -20,6 +20,7 @@ import { v1Router } from './api/v1/index.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const publicDir = path.join(root, 'public');
+const clientDist = path.join(root, 'client', 'dist');
 
 const app = express();
 
@@ -46,7 +47,9 @@ app.use('/api/v1', v1Router(knex, config));
 registerApi(app, db);
 registerAuthApi(app, knex, config);
 
-if (fs.existsSync(publicDir)) {
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist, { index: false, maxAge: config.isProduction ? '1h' : 0 }));
+} else if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir, { index: 'index.html', maxAge: config.isProduction ? '1h' : 0 }));
 }
 
@@ -59,6 +62,13 @@ app.get('/health', async (_req, res) => {
     res.status(503).json({ ok: false, service: 'vexor-erp' });
   }
 });
+
+if (fs.existsSync(clientDist)) {
+  app.get('*', (req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
